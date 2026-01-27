@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useSekolahInfo } from "@/hooks/useSWR";
 import {
   LayoutDashboard,
   Users,
@@ -58,19 +58,8 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const [schoolInfo, setSchoolInfo] = useState<any>(null);
-
-  // Fetch school info
-  useEffect(() => {
-    fetch('/api/school/info')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          setSchoolInfo(data.data);
-        }
-      })
-      .catch(err => console.error('Error fetching school info:', err));
-  }, []);
+  const { data: schoolInfoData } = useSekolahInfo();
+  const schoolInfo = (schoolInfoData as any)?.data;
 
   const isActive = (url: string) => {
     if (url === "/admin") {
