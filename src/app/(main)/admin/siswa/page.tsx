@@ -35,7 +35,7 @@ import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-mod
 
 export default function SiswaPage() {
   const [selectedKelas, setSelectedKelas] = useState<string>("all");
-  const { data: siswaData, error: siswaError, isLoading: siswaLoading, mutate } = useSiswa(selectedKelas);
+  const { data: siswaData, isLoading: siswaLoading, mutate } = useSiswa(selectedKelas);
   const { data: kelasData, isLoading: kelasLoading } = useKelas();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -63,12 +63,8 @@ export default function SiswaPage() {
     return <LoadingSpinner />;
   }
 
-  if (siswaError) {
-    return <ErrorState message="Gagal memuat data siswa" onRetry={() => mutate()} />;
-  }
-
-  const siswa = siswaData?.data || [];
-  const kelasList = kelasData?.data || [];
+  const siswa = (siswaData as any)?.data || [];
+  const kelasList = (kelasData as any)?.data || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

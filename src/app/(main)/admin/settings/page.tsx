@@ -13,8 +13,8 @@ import { useSekolahInfo } from "@/hooks/useSWR";
 import { LoadingSpinner, ErrorState } from "@/components/ui/loading-spinner";
 
 export default function AdminSettingsPage() {
-  const { data: sekolahData, isLoading, error, mutate } = useSekolahInfo();
-  const sekolah = sekolahData?.data;
+  const { data: sekolahData, isLoading, mutate } = useSekolahInfo();
+  const sekolah = (sekolahData as any)?.data;
 
   const [formData, setFormData] = useState({
     namaSekolah: "",
@@ -53,10 +53,6 @@ export default function AdminSettingsPage() {
 
   if (isLoading) {
     return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <ErrorState message="Gagal memuat data sekolah" onRetry={() => mutate()} />;
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

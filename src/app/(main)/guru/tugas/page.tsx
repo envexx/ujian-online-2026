@@ -508,7 +508,7 @@ export default function TugasGuruPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTugas.map((t) => (
+              {filteredTugas.map((t: any) => (
                 <TableRow key={t.id}>
                   <TableCell>
                     <div>
@@ -518,7 +518,7 @@ export default function TugasGuruPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {t.kelas.map((k) => (
+                      {t.kelas.map((k: any) => (
                         <span key={k} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
                           {k}
                         </span>

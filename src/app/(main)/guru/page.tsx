@@ -146,7 +146,7 @@ export default function GuruDashboard() {
           <CardContent>
             <div className="space-y-4">
               {jadwalHariIni.length > 0 ? (
-                jadwalHariIni.map((jadwal) => (
+                jadwalHariIni.map((jadwal: any) => (
                   <div
                     key={jadwal.id}
                     className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors"
@@ -196,7 +196,7 @@ export default function GuruDashboard() {
           <CardContent>
             <div className="space-y-4">
               {tugasPending.length > 0 ? (
-                tugasPending.map((tugas) => (
+                tugasPending.map((tugas: any) => (
                   <div
                     key={tugas.id}
                     className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors"

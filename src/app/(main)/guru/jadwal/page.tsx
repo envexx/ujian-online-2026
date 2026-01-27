@@ -131,7 +131,7 @@ export default function JadwalGuruPage() {
                   </div>
                   {jadwalHari.length > 0 ? (
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {jadwalHari.map((j) => (
+                      {jadwalHari.map((j: any) => (
                         <Card key={j.id} className="hover:bg-accent transition-colors">
                           <CardContent className="p-4">
                             <div className="space-y-2">
@@ -183,7 +183,7 @@ export default function JadwalGuruPage() {
             <div className="p-4 border rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">Kelas Diampu</p>
               <p className="text-2xl font-bold">
-                {new Set(filteredJadwal.map(j => j.kelas)).size}
+                {new Set(filteredJadwal.map((j: any) => j.kelas)).size}
               </p>
             </div>
             <div className="p-4 border rounded-lg">

@@ -4,9 +4,10 @@ import { getSession } from '@/lib/session';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getSession();
 
     if (!session.isLoggedIn || session.role !== 'GURU') {
@@ -31,7 +32,7 @@ export async function GET(
     // Get tugas detail with submissions
     const tugas = await prisma.tugas.findFirst({
       where: {
-        id: params.id,
+        id: id,
         guruId: guru.id,
       },
       include: {

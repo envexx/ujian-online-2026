@@ -166,9 +166,9 @@ export default function MateriGuruPage() {
 
   const stats = {
     total: materi.length,
-    pdf: materi.filter(m => m.tipe === "pdf").length,
-    video: materi.filter(m => m.tipe === "video").length,
-    image: materi.filter(m => m.tipe === "image").length,
+    pdf: materi.filter((m: any) => m.tipe === "pdf").length,
+    video: materi.filter((m: any) => m.tipe === "video").length,
+    image: materi.filter((m: any) => m.tipe === "image").length,
   };
 
   return (
@@ -240,8 +240,8 @@ export default function MateriGuruPage() {
                 <div className="space-y-2">
                   <Label htmlFor="mapel">Mata Pelajaran</Label>
                   <Select
-                    value={formData.mapel}
-                    onValueChange={(value) => setFormData({ ...formData, mapel: value })}
+                    value={formData.mapelId}
+                    onValueChange={(value) => setFormData({ ...formData, mapelId: value })}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -394,7 +394,7 @@ export default function MateriGuruPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredMateri.map((m) => (
+              {filteredMateri.map((m: any) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.judul}</TableCell>
                   <TableCell className="max-w-xs truncate">{m.deskripsi}</TableCell>

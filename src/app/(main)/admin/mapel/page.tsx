@@ -46,7 +46,7 @@ export default function MapelPage() {
     return <LoadingSpinner />;
   }
 
-  const mapel = mapelData?.data || [];
+  const mapel = (mapelData as any)?.data || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

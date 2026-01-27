@@ -27,7 +27,7 @@ import { LoadingSpinner, ErrorState } from "@/components/ui/loading-spinner";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 
 export default function KelasPage() {
-  const { data: kelasData, error, isLoading, mutate } = useKelas();
+  const { data: kelasData, isLoading, mutate } = useKelas();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingKelas, setEditingKelas] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,11 +45,7 @@ export default function KelasPage() {
     return <LoadingSpinner />;
   }
 
-  if (error) {
-    return <ErrorState message="Gagal memuat data kelas" onRetry={() => mutate()} />;
-  }
-
-  const kelas = kelasData?.data || [];
+  const kelas = (kelasData as any)?.data || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

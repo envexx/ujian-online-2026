@@ -56,7 +56,6 @@ export async function GET(request: Request) {
           judul: m.judul,
           deskripsi: m.deskripsi,
           tipe: m.tipe,
-          konten: m.konten,
           fileUrl: m.fileUrl,
           mapel: m.mapel.nama,
           guru: m.guru.nama,

@@ -36,7 +36,7 @@ import JSZip from "jszip";
 
 export default function KartuPelajarPage() {
   const [selectedKelas, setSelectedKelas] = useState<string>("all");
-  const { data: siswaData, error, isLoading, mutate } = useSiswa(selectedKelas);
+  const { data: siswaData, isLoading, mutate } = useSiswa(selectedKelas);
   const { data: kelasData, isLoading: kelasLoading } = useKelas();
   const { data: sekolahData, isLoading: sekolahLoading } = useSekolahInfo();
   
@@ -45,9 +45,9 @@ export default function KartuPelajarPage() {
   const [isExporting, setIsExporting] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const siswa = siswaData?.data || [];
-  const kelasList = kelasData?.data || [];
-  const sekolah = sekolahData?.data;
+  const siswa = (siswaData as any)?.data || [];
+  const kelasList = (kelasData as any)?.data || [];
+  const sekolah = (sekolahData as any)?.data;
 
   // Debug: Log sekolah data - MUST be before any early returns
   React.useEffect(() => {
@@ -61,10 +61,6 @@ export default function KartuPelajarPage() {
 
   if (isLoading || kelasLoading || sekolahLoading) {
     return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <ErrorState message="Gagal memuat data siswa" onRetry={() => mutate()} />;
   }
 
   const generateQRCode = async (nisn: string) => {
@@ -302,7 +298,7 @@ export default function KartuPelajarPage() {
               <StudentCard 
                 siswa={previewSiswa} 
                 sekolah={sekolah} 
-                cardRef={cardRef}
+                cardRef={cardRef as React.RefObject<HTMLDivElement>}
                 generateQRCode={generateQRCode}
               />
 

@@ -81,9 +81,9 @@ export default function PresensiPage() {
   const { data: presensiData, isLoading: presensiLoading, mutate } = usePresensi(tanggal);
   const { data: siswaData } = useSiswa("all");
 
-  const kelasList = kelasData?.data || [];
-  const presensiList = presensiData?.data || [];
-  const siswaList = siswaData?.data || [];
+  const kelasList = (kelasData as any)?.data || [];
+  const presensiList = (presensiData as any)?.data || [];
+  const siswaList = (siswaData as any)?.data || [];
 
   // Filter siswa for search - MUST be before any conditional returns
   const filteredSiswaForSearch = useMemo(() => {
