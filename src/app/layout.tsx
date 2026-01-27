@@ -13,9 +13,15 @@ import { Providers } from "@/app/providers";
 
 import "./globals.css";
 
+// Get school name from environment
+const schoolName = process.env.NEXT_PUBLIC_SCHOOL_NAME || "E-Learning System";
+
 export const metadata: Metadata = {
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
+  title: {
+    default: `${schoolName} - E-Learning`,
+    template: `%s - ${schoolName} - E-Learning`,
+  },
+  description: "Sistem E-Learning untuk manajemen pendidikan",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
