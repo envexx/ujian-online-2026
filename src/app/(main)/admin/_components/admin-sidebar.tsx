@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useSekolahInfo } from "@/hooks/useSWR";
+import { useSekolahInfoWithFallback } from "@/hooks/useSWR";
 import {
   LayoutDashboard,
   Users,
@@ -58,7 +58,7 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const { data: schoolInfoData } = useSekolahInfo();
+  const { data: schoolInfoData } = useSekolahInfoWithFallback();
   const schoolInfo = (schoolInfoData as any)?.data;
 
   const isActive = (url: string) => {
@@ -72,13 +72,21 @@ export function AdminSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center gap-2">
-          {schoolInfo && schoolInfo.logo ? (
-            <Image src={schoolInfo.logo} width={32} height={32} alt="School Logo" />
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-[#1488cc] to-[#2b32b2] rounded-lg flex items-center justify-center shadow-sm">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-          )}
+          <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-white p-1 border">
+            {schoolInfo?.logo ? (
+              <Image
+                src={schoolInfo.logo}
+                alt="School Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <GraduationCap className="w-4 h-4 text-gray-400" />
+              </div>
+            )}
+          </div>
           <div className="flex flex-col">
             <span className="font-semibold text-sm">LMS Admin</span>
             <span className="text-xs text-muted-foreground">{schoolInfo?.nama || 'Panel Administrator'}</span>

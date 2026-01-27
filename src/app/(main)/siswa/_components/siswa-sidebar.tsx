@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useSekolahInfo } from "@/hooks/useSWR";
+import { useSekolahInfoWithFallback } from "@/hooks/useSWR";
 import {
   Sidebar,
   SidebarContent,
@@ -66,7 +66,7 @@ const menuItems = [
 
 export function SiswaSidebar() {
   const pathname = usePathname();
-  const { data: schoolInfoData } = useSekolahInfo();
+  const { data: schoolInfoData } = useSekolahInfoWithFallback();
   const schoolInfo = (schoolInfoData as any)?.data;
 
   const isActive = (url: string) => {
@@ -80,8 +80,8 @@ export function SiswaSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center gap-2">
-          {schoolInfo?.logo ? (
-            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white p-1 border">
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white p-1 border">
+            {schoolInfo?.logo ? (
               <Image
                 src={schoolInfo.logo}
                 alt={schoolInfo.nama || 'School Logo'}
@@ -89,12 +89,12 @@ export function SiswaSidebar() {
                 className="object-contain"
                 priority
               />
-            </div>
-          ) : (
-            <div className="p-2 rounded-lg bg-gradient-to-r from-[#1488cc] to-[#2b32b2]">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-          )}
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-gray-400" />
+              </div>
+            )}
+          </div>
           <div>
             <h2 className="font-semibold">Portal Siswa</h2>
             <p className="text-xs text-muted-foreground">{schoolInfo?.nama || 'E-Learning System'}</p>

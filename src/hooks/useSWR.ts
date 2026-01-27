@@ -140,7 +140,88 @@ export function useGuru(mapel?: string) {
 
 // Sekolah Info
 export function useSekolahInfo() {
-  return useData('/api/sekolah-info', true);
+  return useData('/api/school/info', true);
+}
+
+// Sekolah Info - Lazy version for sidebar (optimized caching)
+export function useSekolahInfoLazy() {
+  const { data, error, isLoading, mutate } = useSWR(
+    '/api/school/info',
+    fetcherWithAuth,
+    {
+      revalidateIfStale: false,      // Jangan ambil data lagi jika sudah ada di cache
+      revalidateOnFocus: false,      // Jangan loading ulang saat user pindah tab browser
+      revalidateOnReconnect: false,  // Jangan loading ulang saat internet nyambung lagi
+      dedupingInterval: 3600000,     // Anggap data "segar" selama 1 jam
+      refreshInterval: 0,           // Tidak ada auto-refresh
+      errorRetryCount: 1,            // Coba retry hanya sekali
+      errorRetryInterval: 5000,      // Retry setelah 5 detik
+    }
+  );
+
+  return {
+    data,
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+
+// Sekolah Info - With localStorage fallback (most optimal)
+export function useSekolahInfoWithFallback() {
+  // Get fallback data from localStorage
+  const getFallbackData = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('school-info-cache');
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          // Cache valid for 24 hours
+          if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+            return data;
+          }
+        }
+      } catch (error) {
+        console.warn('Error reading school info from localStorage:', error);
+      }
+    }
+    return null;
+  };
+
+  const { data, error, isLoading, mutate } = useSWR(
+    '/api/school/info',
+    fetcherWithAuth,
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 3600000,     // 1 hour
+      refreshInterval: 0,
+      errorRetryCount: 1,
+      errorRetryInterval: 5000,
+      fallbackData: getFallbackData(), // Use localStorage as fallback
+      onSuccess: (data) => {
+        // Cache successful data to localStorage
+        if (typeof window !== 'undefined' && data) {
+          try {
+            localStorage.setItem('school-info-cache', JSON.stringify({
+              data,
+              timestamp: Date.now()
+            }));
+          } catch (error) {
+            console.warn('Error caching school info to localStorage:', error);
+          }
+        }
+      }
+    }
+  );
+
+  return {
+    data,
+    isLoading,
+    isError: error,
+    mutate,
+  };
 }
 
 // Presensi Today - for checking attendance status
