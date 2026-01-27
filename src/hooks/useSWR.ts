@@ -143,6 +143,33 @@ export function useSekolahInfo() {
   return useData('/api/school/info', true);
 }
 
+// Sekolah Info with manual refresh capability
+export function useSekolahInfoWithRefresh() {
+  const { data, error, isLoading, mutate } = useSWR(
+    '/api/school/info',
+    fetcher,
+    {
+      revalidateOnFocus: true,       // Refresh when user returns to tab
+      revalidateOnReconnect: true,   // Refresh when internet reconnects
+      dedupingInterval: 5000,       // 5 seconds deduplication
+      refreshInterval: 0,           // No auto-refresh
+      errorRetryCount: 3,
+      errorRetryInterval: 3000,
+    }
+  );
+
+  return {
+    data,
+    isLoading,
+    isError: error,
+    mutate,
+    refresh: () => {
+      // Force refresh by clearing cache and revalidating
+      mutate(undefined, { revalidate: true });
+    }
+  };
+}
+
 // Sekolah Info - Lazy version for sidebar (optimized caching)
 export function useSekolahInfoLazy() {
   const { data, error, isLoading, mutate } = useSWR(
