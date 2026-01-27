@@ -61,7 +61,7 @@ export function GuruHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="/avatars/guru.png" alt="Guru" />
+                <AvatarImage src="/uploads/profiles/guru1.jpg" alt="Guru" />
                 <AvatarFallback className="bg-gradient-to-r from-[#1488cc] to-[#2b32b2] text-white">
                   BH
                 </AvatarFallback>
