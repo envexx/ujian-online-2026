@@ -89,6 +89,8 @@ export default function KartuPelajarPage() {
         background: '#ffffff',
         logging: false,
         useCORS: true,
+        width: cardRef.current?.offsetWidth * 3, // 3x scale for HD quality
+        height: cardRef.current?.offsetHeight * 3,
       });
 
       const link = document.createElement('a');
@@ -151,6 +153,8 @@ export default function KartuPelajarPage() {
               background: '#ffffff',
               logging: false,
               useCORS: true,
+              width: cardRef.current?.offsetWidth * 3, // 3x scale for HD quality
+              height: cardRef.current?.offsetHeight * 3,
             });
 
             const blob = await new Promise<Blob>((resolve) => {
@@ -352,16 +356,18 @@ function StudentCard({
     <div 
       ref={cardRef}
       style={{
-        width: '100%',
-        maxWidth: '600px',
-        aspectRatio: '600/350',
+        width: '600px', // Fixed width for consistent export
+        height: '350px', // Fixed height for consistent export
+        minWidth: '600px', // Prevent shrinking
+        minHeight: '350px', // Prevent shrinking
         background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
         borderRadius: '12px',
-        padding: 'clamp(16px, 4vw, 24px)',
+        padding: '24px',
         color: 'white',
         position: 'relative',
         overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        boxSizing: 'border-box',
       }}
     >
       {/* Background Pattern */}
