@@ -28,71 +28,34 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get all submissions with grades
-    const [tugasSubmissions, ujianSubmissions] = await Promise.all([
-      prisma.tugasSubmission.findMany({
-        where: {
-          siswaId: siswa.id,
-          nilai: {
-            not: null,
+    // Get only ujian submissions with grades
+    const ujianSubmissions = await prisma.ujianSubmission.findMany({
+      where: {
+        siswaId: siswa.id,
+        nilai: {
+          not: null,
+        },
+      },
+      include: {
+        ujian: {
+          include: {
+            mapel: true,
           },
         },
-        include: {
-          tugas: {
-            include: {
-              mapel: true,
-            },
-          },
-        },
-        orderBy: {
-          submittedAt: 'desc',
-        },
-      }),
-      prisma.ujianSubmission.findMany({
-        where: {
-          siswaId: siswa.id,
-          nilai: {
-            not: null,
-          },
-        },
-        include: {
-          ujian: {
-            include: {
-              mapel: true,
-            },
-          },
-        },
-        orderBy: {
-          submittedAt: 'desc',
-        },
-      }),
-    ]);
+      },
+      orderBy: {
+        submittedAt: 'desc',
+      },
+    });
 
     // Group by mapel
     const nilaiPerMapel: Record<string, any> = {};
-
-    tugasSubmissions.forEach(sub => {
-      const mapelNama = sub.tugas.mapel.nama;
-      if (!nilaiPerMapel[mapelNama]) {
-        nilaiPerMapel[mapelNama] = {
-          mapel: mapelNama,
-          tugas: [],
-          ujian: [],
-        };
-      }
-      nilaiPerMapel[mapelNama].tugas.push({
-        judul: sub.tugas.judul,
-        nilai: sub.nilai,
-        tanggal: sub.submittedAt,
-      });
-    });
 
     ujianSubmissions.forEach(sub => {
       const mapelNama = sub.ujian.mapel.nama;
       if (!nilaiPerMapel[mapelNama]) {
         nilaiPerMapel[mapelNama] = {
           mapel: mapelNama,
-          tugas: [],
           ujian: [],
         };
       }
@@ -105,29 +68,21 @@ export async function GET(request: Request) {
 
     // Calculate average per mapel
     const raport = Object.values(nilaiPerMapel).map((data: any) => {
-      const allNilai = [
-        ...data.tugas.map((t: any) => t.nilai),
-        ...data.ujian.map((u: any) => u.nilai),
-      ];
+      const allNilai = data.ujian.map((u: any) => u.nilai);
       const rataRata = allNilai.length > 0
         ? Math.round(allNilai.reduce((a: number, b: number) => a + b, 0) / allNilai.length)
         : 0;
 
       return {
         mapel: data.mapel,
-        totalTugas: data.tugas.length,
         totalUjian: data.ujian.length,
         rataRata,
-        tugas: data.tugas,
         ujian: data.ujian,
       };
     });
 
-    // Overall average
-    const allNilai = [
-      ...tugasSubmissions.map(s => s.nilai as number),
-      ...ujianSubmissions.map(s => s.nilai as number),
-    ];
+    // Overall average (only from ujian)
+    const allNilai = ujianSubmissions.map(s => s.nilai as number);
     const rataRataKeseluruhan = allNilai.length > 0
       ? Math.round(allNilai.reduce((a, b) => a + b, 0) / allNilai.length)
       : 0;
@@ -141,7 +96,6 @@ export async function GET(request: Request) {
           kelas: siswa.kelas.nama,
         },
         rataRataKeseluruhan,
-        totalTugasDinilai: tugasSubmissions.length,
         totalUjianDinilai: ujianSubmissions.length,
         raport,
       },

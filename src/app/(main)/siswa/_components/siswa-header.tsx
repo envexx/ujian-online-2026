@@ -1,16 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { useRouter, usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,10 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User } from "lucide-react";
+import { Bell, LogOut, User, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { useSekolahInfo } from "@/hooks/useSWR";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -33,7 +26,10 @@ const fetcher = async (url: string) => {
 
 export function SiswaHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data } = useSWR('/api/siswa/dashboard', fetcher);
+  const { data: schoolInfoData } = useSekolahInfo();
+  const schoolInfo = (schoolInfoData as any)?.data;
 
   const siswa = data?.data?.siswa || {};
   const nama = siswa.nama || 'Siswa';
@@ -54,22 +50,28 @@ export function SiswaHeader() {
   };
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-      <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-2 h-4" />
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem className="hidden md:block">
-            <BreadcrumbLink href="/siswa">
-              Portal Siswa
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden md:block" />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Dashboard</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+      <div className="flex items-center gap-2">
+        <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-white p-1 border">
+          {schoolInfo?.logo ? (
+            <Image
+              src={schoolInfo.logo}
+              alt={schoolInfo.nama || 'School Logo'}
+              fill
+              className="object-contain"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-gray-400" />
+            </div>
+          )}
+        </div>
+        <div className="hidden sm:block">
+          <h2 className="font-semibold text-sm">Portal Siswa</h2>
+          <p className="text-xs text-muted-foreground">{schoolInfo?.nama || 'E-Learning System'}</p>
+        </div>
+      </div>
       <div className="ml-auto flex items-center gap-2">
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

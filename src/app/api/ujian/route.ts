@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         ...(statusFilter && statusFilter !== 'all' ? { status: statusFilter as any } : {}),
       },
       include: includes.ujianWithStats,
-      orderBy: { tanggal: 'desc' },
+      orderBy: { startUjian: 'desc' },
     });
     
     return NextResponse.json({

@@ -108,7 +108,6 @@ model MataPelajaran {
   materi  Materi[]
   ujian   Ujian[]
   tugas   Tugas[]
-  nilai   Nilai[]
 
   @@map("mata_pelajaran")
 }
@@ -139,7 +138,7 @@ model Guru {
   materi        Materi[]
   ujian         Ujian[]
   tugas         Tugas[]
-  nilaiInput    Nilai[]
+  gradeConfig   GradeConfig?    // Konfigurasi bobot penilaian
 
   @@index([nipUsername])
   @@index([email])
@@ -198,7 +197,6 @@ model Siswa {
   kelas             Kelas               @relation(fields: [kelasId], references: [id])
   presensi          Presensi[]
   kartuPelajar      KartuPelajar?
-  nilai             Nilai[]
   tugasSubmission   TugasSubmission[]
   ujianSubmission   UjianSubmission[]
 
@@ -386,9 +384,8 @@ model Ujian {
   mapelId           String
   guruId            String
   kelas             String[] // Array of kelas names
-  tanggal           DateTime
-  waktuMulai        String // 08:00
-  durasi            Int // in minutes
+  startUjian        DateTime // Waktu mulai ujian (tanggal + jam)
+  endUjian          DateTime // Waktu akhir ujian (tanggal + jam)
   shuffleQuestions  Boolean  @default(false)
   showScore         Boolean  @default(true)
   status            String   @default("draft") // draft, aktif, selesai
@@ -405,7 +402,8 @@ model Ujian {
   @@index([guruId])
   @@index([mapelId])
   @@index([status])
-  @@index([tanggal])
+  @@index([startUjian])
+  @@index([endUjian])
   @@map("ujian")
 }
 
@@ -519,32 +517,31 @@ model JawabanEssay {
 }
 
 // ============================================
-// NILAI
+// GRADE CONFIGURATION
 // ============================================
 
-model Nilai {
-  id         String   @id @default(cuid())
-  siswaId    String
-  mapelId    String
-  guruId     String
-  tugas      Int?
-  uts        Int?
-  uas        Int?
-  nilaiAkhir Int?
-  semester   String // Ganjil, Genap
-  tahunAjaran String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model GradeConfig {
+  id              String   @id @default(cuid())
+  guruId          String   @unique // Satu guru satu konfigurasi
+  namaPG          String   @default("Pilihan Ganda") // Nama komponen PG
+  bobotPG         Int      @default(50) // Persentase bobot PG (0-100)
+  activePG        Boolean  @default(true) // Apakah komponen PG aktif
+  namaEssay       String   @default("Essay") // Nama komponen Essay
+  bobotEssay      Int      @default(50) // Persentase bobot Essay (0-100)
+  activeEssay     Boolean  @default(true) // Apakah komponen Essay aktif
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  siswa Siswa         @relation(fields: [siswaId], references: [id], onDelete: Cascade)
-  mapel MataPelajaran @relation(fields: [mapelId], references: [id], onDelete: Cascade)
-  guru  Guru          @relation(fields: [guruId], references: [id], onDelete: Cascade)
+  guru Guru @relation(fields: [guruId], references: [id], onDelete: Cascade)
 
-  @@unique([siswaId, mapelId, semester, tahunAjaran])
-  @@index([siswaId])
-  @@index([mapelId])
-  @@index([semester])
-  @@index([tahunAjaran])
-  @@map("nilai")
+  @@index([guruId])
+  @@map("grade_config")
 }
+
+// ============================================
+// NILAI - REMOVED
+// ============================================
+// Nilai sekarang dihitung langsung dari UjianSubmission
+// menggunakan persentase bobot PG & Essay dari GradeConfig
+// Tidak perlu tabel terpisah karena nilai = rata-rata semua ujian

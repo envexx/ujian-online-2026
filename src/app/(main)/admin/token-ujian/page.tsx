@@ -27,7 +27,7 @@ interface TokenHistory {
 export default function TokenUjianPage() {
   const [isUjianActive, setIsUjianActive] = useState(false);
   const [currentToken, setCurrentToken] = useState("");
-  const [timeRemaining, setTimeRemaining] = useState(120);
+  const [timeRemaining, setTimeRemaining] = useState(1800); // 30 minutes in seconds
   const [tokenHistory, setTokenHistory] = useState<TokenHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [tokenExpiresAt, setTokenExpiresAt] = useState<Date | null>(null);
@@ -55,7 +55,7 @@ export default function TokenUjianPage() {
         } else {
           setCurrentToken("");
           setTokenExpiresAt(null);
-          setTimeRemaining(120);
+          setTimeRemaining(1800); // 30 minutes in seconds
         }
       }
     } catch (error) {
@@ -84,7 +84,11 @@ export default function TokenUjianPage() {
         const { token, expiresAt } = result.data;
         setCurrentToken(token);
         setTokenExpiresAt(new Date(expiresAt));
-        setTimeRemaining(120);
+        // Calculate time remaining from expiresAt
+        const now = new Date();
+        const expires = new Date(expiresAt);
+        const remaining = Math.max(0, Math.floor((expires.getTime() - now.getTime()) / 1000));
+        setTimeRemaining(remaining);
         
         // Add to history
         const newHistory: TokenHistory = {
@@ -121,7 +125,7 @@ export default function TokenUjianPage() {
       if (result.success) {
         setCurrentToken("");
         setTokenExpiresAt(null);
-        setTimeRemaining(120);
+        setTimeRemaining(1800); // 30 minutes in seconds
         toast.info("Token dinonaktifkan");
       } else {
         toast.error(result.error || "Gagal menonaktifkan token");
@@ -187,7 +191,7 @@ export default function TokenUjianPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Token Ujian</h1>
-        <p className="text-muted-foreground">Kelola akses ujian dengan token yang auto-refresh setiap 2 menit</p>
+        <p className="text-muted-foreground">Kelola akses ujian dengan token yang aktif selama 30 menit</p>
       </div>
 
       <Card>
@@ -246,7 +250,7 @@ export default function TokenUjianPage() {
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-[#1488cc] to-[#2b32b2] h-2 rounded-full transition-all duration-1000"
-                      style={{ width: `${(timeRemaining / 120) * 100}%` }}
+                      style={{ width: `${(timeRemaining / 1800) * 100}%` }}
                     />
                   </div>
                 </div>

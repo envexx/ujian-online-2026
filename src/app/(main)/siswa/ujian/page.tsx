@@ -17,10 +17,12 @@ import {
   ArrowRight,
   Trophy,
   LockKey,
+  FileText,
 } from "@phosphor-icons/react";
 import { format, differenceInDays } from "date-fns";
 import { id } from "date-fns/locale";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -30,6 +32,7 @@ const fetcher = async (url: string) => {
 
 export default function SiswaUjianPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { isLoading: authLoading } = useAuth();
   const [filterTab, setFilterTab] = useState<"all" | "selesai" | "belum">("all");
   const { data, error, isLoading } = useSWR('/api/siswa/ujian', fetcher);
@@ -61,13 +64,54 @@ export default function SiswaUjianPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Ujian</h1>
-        <p className="text-muted-foreground">
-          Lihat dan kerjakan ujian dari guru
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* Header dengan Navigasi Mobile */}
+        <div className="space-y-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Ujian</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Lihat dan kerjakan ujian dari guru
+            </p>
+          </div>
+
+          {/* Navigasi Mobile Style */}
+          <div className="flex gap-3">
+            <Button
+              onClick={() => router.push('/siswa')}
+              className={cn(
+                "flex-1 h-12 rounded-xl font-semibold transition-all",
+                "bg-white hover:bg-gray-50 border shadow-sm !text-black"
+              )}
+            >
+              Dashboard
+            </Button>
+            <Button
+              onClick={() => router.push('/siswa/ujian')}
+              className={cn(
+                "flex-1 h-12 rounded-xl font-semibold transition-all",
+                pathname === '/siswa/ujian' 
+                  ? "bg-gradient-to-r from-[#1488cc] to-[#2b32b2] text-white shadow-lg" 
+                  : "bg-white hover:bg-gray-50 border shadow-sm !text-black [&_svg]:!text-black"
+              )}
+            >
+              <FileText className="w-5 h-5 mr-2" weight="duotone" />
+              Ujian
+            </Button>
+            <Button
+              onClick={() => router.push('/siswa/raport')}
+              className={cn(
+                "flex-1 h-12 rounded-xl font-semibold transition-all",
+                pathname === '/siswa/raport' 
+                  ? "bg-gradient-to-r from-[#1488cc] to-[#2b32b2] text-white shadow-lg" 
+                  : "bg-white hover:bg-gray-50 border shadow-sm !text-black [&_svg]:!text-black"
+              )}
+            >
+              <Trophy className="w-5 h-5 mr-2" weight="duotone" />
+              Raport
+            </Button>
+          </div>
+        </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-3">
         <Card className="rounded-xl border-0 bg-gradient-to-br from-purple-50 to-pink-50 shadow-sm">
@@ -115,9 +159,9 @@ export default function SiswaUjianPage() {
 
       <Tabs value={filterTab} onValueChange={(value: any) => setFilterTab(value)} className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="all" className="text-xs sm:text-sm">Semua ({stats.total})</TabsTrigger>
-          <TabsTrigger value="belum" className="text-xs sm:text-sm whitespace-nowrap">Belum ({stats.belum})</TabsTrigger>
-          <TabsTrigger value="selesai" className="text-xs sm:text-sm whitespace-nowrap">Sudah ({stats.selesai})</TabsTrigger>
+          <TabsTrigger value="all" className="text-xs sm:text-sm !text-black data-[state=active]:!text-foreground font-medium">Semua ({stats.total})</TabsTrigger>
+          <TabsTrigger value="belum" className="text-xs sm:text-sm whitespace-nowrap !text-black data-[state=active]:!text-foreground font-medium">Belum ({stats.belum})</TabsTrigger>
+          <TabsTrigger value="selesai" className="text-xs sm:text-sm whitespace-nowrap !text-black data-[state=active]:!text-foreground font-medium">Sudah ({stats.selesai})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={filterTab} className="space-y-4">
@@ -187,7 +231,7 @@ export default function SiswaUjianPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" weight="duotone" />
                           <span className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
-                            {format(new Date(u.tanggal), "dd MMM yyyy", { locale: id })} • {u.waktuMulai}
+                            {format(new Date(u.startUjian), "dd MMM yyyy HH:mm", { locale: id })}
                           </span>
                         </div>
 
@@ -195,7 +239,7 @@ export default function SiswaUjianPage() {
                           <div className="flex items-center gap-2 min-w-0">
                             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" weight="duotone" />
                             <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
-                              {u.durasi} menit • {u.totalSoal} soal
+                              {Math.round((new Date(u.endUjian).getTime() - new Date(u.startUjian).getTime()) / 60000)} menit • {u.totalSoal} soal
                             </span>
                           </div>
 
@@ -251,6 +295,7 @@ export default function SiswaUjianPage() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

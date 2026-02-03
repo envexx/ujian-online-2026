@@ -52,7 +52,7 @@ export async function GET(request: Request) {
           },
         },
         orderBy: {
-          tanggal: 'desc',
+          startUjian: 'desc',
         },
       }),
       // Get kelas that this guru teaches
@@ -93,9 +93,8 @@ export async function GET(request: Request) {
           mapel: u.mapel.nama,
           mapelId: u.mapelId,
           kelas: u.kelas,
-          tanggal: u.tanggal,
-          waktuMulai: u.waktuMulai,
-          durasi: u.durasi,
+          startUjian: u.startUjian,
+          endUjian: u.endUjian,
           shuffleQuestions: u.shuffleQuestions,
           showScore: u.showScore,
           status: u.status,
@@ -140,15 +139,39 @@ export async function POST(request: Request) {
       deskripsi, 
       mapelId, 
       kelas, 
-      tanggal, 
-      waktuMulai, 
-      durasi,
+      startUjian, 
+      endUjian,
       shuffleQuestions,
       showScore,
       status,
       soalPG,
       soalEssay,
     } = body;
+
+    // Validate startUjian and endUjian
+    if (!startUjian || !endUjian) {
+      return NextResponse.json(
+        { success: false, error: 'Waktu mulai dan waktu akhir ujian harus diisi' },
+        { status: 400 }
+      );
+    }
+
+    const startDate = new Date(startUjian);
+    const endDate = new Date(endUjian);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Format waktu tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    if (endDate <= startDate) {
+      return NextResponse.json(
+        { success: false, error: 'Waktu akhir harus lebih besar dari waktu mulai' },
+        { status: 400 }
+      );
+    }
 
     // Get guru data
     const guru = await prisma.guru.findFirst({
@@ -218,9 +241,8 @@ export async function POST(request: Request) {
         mapelId,
         guruId: guru.id,
         kelas: Array.isArray(kelas) ? kelas : [kelas],
-        tanggal: new Date(tanggal),
-        waktuMulai,
-        durasi: parseInt(durasi),
+        startUjian: startDate,
+        endUjian: endDate,
         shuffleQuestions: shuffleQuestions || false,
         showScore: showScore !== false,
         status: finalStatus,

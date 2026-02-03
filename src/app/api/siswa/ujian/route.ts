@@ -70,7 +70,7 @@ export async function GET(request: Request) {
         },
       },
       orderBy: {
-        tanggal: 'desc',
+        startUjian: 'desc',
       },
     });
 
@@ -80,13 +80,9 @@ export async function GET(request: Request) {
         ujian: ujian.map(u => {
           const submission = u.submissions[0];
           
-          // Parse exam date and time
-          const examDate = new Date(u.tanggal);
-          const [hours, minutes] = u.waktuMulai.split(':').map(Number);
-          examDate.setHours(hours, minutes, 0, 0);
-          
-          // Calculate exam end time
-          const examEndTime = new Date(examDate.getTime() + u.durasi * 60000);
+          // Parse exam start and end time from database
+          const examStartTime = new Date(u.startUjian);
+          const examEndTime = new Date(u.endUjian);
           
           // Determine exam status
           let examStatus = 'belum_dimulai'; // not started yet
@@ -95,13 +91,13 @@ export async function GET(request: Request) {
           if (submission) {
             examStatus = 'selesai'; // already submitted
             canStart = false; // Already completed, no need to start again
-          } else if (now < examDate) {
+          } else if (now < examStartTime) {
             examStatus = 'belum_dimulai'; // not started yet
             canStart = false;
-          } else if (now >= examDate && now <= examEndTime) {
+          } else if (now >= examStartTime && now <= examEndTime) {
             examStatus = 'berlangsung'; // exam is ongoing
-            // Can only start if access control is active (has valid token)
-            canStart = isAccessActive;
+            // Ujian hanya bisa dimulai pada waktu yang ditentukan (tidak perlu access control)
+            canStart = true;
           } else if (now > examEndTime) {
             examStatus = 'berakhir'; // exam time has passed
             canStart = false;
@@ -112,14 +108,13 @@ export async function GET(request: Request) {
             judul: u.judul,
             deskripsi: u.deskripsi,
             mapel: u.mapel.nama,
-            tanggal: u.tanggal,
-            waktuMulai: u.waktuMulai,
-            durasi: u.durasi,
+            startUjian: u.startUjian,
+            endUjian: u.endUjian,
             totalSoal: u.soalPilihanGanda.length + u.soalEssay.length,
             status: u.status,
             examStatus, // belum_dimulai, berlangsung, berakhir, selesai
             canStart, // boolean - can student start this exam now
-            examStartTime: examDate,
+            examStartTime,
             examEndTime,
             submission: submission ? {
               id: submission.id,

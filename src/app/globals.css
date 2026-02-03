@@ -244,6 +244,20 @@ These serve as the fallback; there is no separate default.css file. */
   [data-slot="dropdown-menu-item"][data-highlighted] [class*="phosphor"] {
     color: #ffffff !important;
   }
+
+  /* Ensure datetime-local inputs use 24-hour format */
+  input[type="datetime-local"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+
+  /* Force 24-hour format display */
+  input[type="datetime-local"]::before {
+    content: attr(data-format);
+  }
 }
 
 html {

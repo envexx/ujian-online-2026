@@ -82,11 +82,20 @@ export async function GET(
       const submission = submissionsMap.get(siswa.id);
 
       // Calculate PG score
+      // Always use total soal from ujian, not from saved answers
       let nilaiPG = null;
-      if (submission && submission.jawabanPilihanGanda && submission.jawabanPilihanGanda.length > 0) {
-        const correctPG = submission.jawabanPilihanGanda.filter((j: any) => j.isCorrect).length;
-        const totalPG = ujian.soalPilihanGanda.length;
-        nilaiPG = totalPG > 0 ? Math.round((correctPG / totalPG) * 100) : 0;
+      const totalPG = ujian.soalPilihanGanda.length;
+      
+      if (submission && totalPG > 0) {
+        // Count correct answers from saved answers
+        const correctPG = submission.jawabanPilihanGanda 
+          ? submission.jawabanPilihanGanda.filter((j: any) => j.isCorrect).length
+          : 0;
+        
+        // Calculate score based on total soal, not saved answers
+        nilaiPG = Math.round((correctPG / totalPG) * 100);
+        
+        console.log(`Siswa ${siswa.nama}: Correct PG: ${correctPG}, Total PG: ${totalPG}, Nilai: ${nilaiPG}`);
       }
 
       // Calculate Essay score
@@ -135,9 +144,8 @@ export async function GET(
           deskripsi: ujian.deskripsi,
           mapel: ujian.mapel.nama,
           kelas: ujian.kelas,
-          tanggal: ujian.tanggal,
-          waktuMulai: ujian.waktuMulai,
-          durasi: ujian.durasi,
+          startUjian: ujian.startUjian,
+          endUjian: ujian.endUjian,
           totalSoalPG: ujian.soalPilihanGanda.length,
           totalSoalEssay: ujian.soalEssay.length,
         },
@@ -231,11 +239,18 @@ export async function PUT(
 
     const totalSoalPG = submission.ujian.soalPilihanGanda.length;
     const totalSoalEssay = submission.ujian.soalEssay.length;
-    const totalSoal = totalSoalPG + totalSoalEssay;
+
+    // Get grading weights from request body (from frontend settings)
+    const { bobotPG = 50, bobotEssay = 50 } = body;
 
     // Calculate PG score (correct answers / total PG * 100)
-    const correctPG = submission.jawabanPilihanGanda.filter(j => j.isCorrect).length;
-    const nilaiPG = totalSoalPG > 0 ? (correctPG / totalSoalPG) * 100 : 0;
+    // Always use total soal from ujian, not from saved answers
+    const correctPG = submission.jawabanPilihanGanda 
+      ? submission.jawabanPilihanGanda.filter((j: any) => j.isCorrect).length
+      : 0;
+    const nilaiPG = totalSoalPG > 0 ? Math.round((correctPG / totalSoalPG) * 100) : 0;
+    
+    console.log(`Updating nilai - Correct PG: ${correctPG}, Total PG: ${totalSoalPG}, Nilai PG: ${nilaiPG}`);
 
     // Calculate Essay score (sum of essay grades / total essay * 100)
     const totalNilaiEssay = submission.jawabanEssay.reduce(
@@ -244,13 +259,20 @@ export async function PUT(
     );
     const nilaiEssay = totalSoalEssay > 0 ? totalNilaiEssay / totalSoalEssay : 0;
 
-    // Calculate weighted final score
+    // Calculate weighted final score using percentage weights from settings
     let nilaiAkhir = 0;
-    if (totalSoal > 0) {
-      const bobotPG = totalSoalPG / totalSoal;
-      const bobotEssay = totalSoalEssay / totalSoal;
-      nilaiAkhir = Math.round((nilaiPG * bobotPG) + (nilaiEssay * bobotEssay));
+    if (totalSoalPG > 0 && totalSoalEssay > 0) {
+      // Both PG and Essay exist - use percentage weights from settings
+      nilaiAkhir = Math.round((nilaiPG * bobotPG / 100) + (nilaiEssay * bobotEssay / 100));
+    } else if (totalSoalPG > 0) {
+      // Only PG - use full PG score
+      nilaiAkhir = nilaiPG;
+    } else if (totalSoalEssay > 0) {
+      // Only Essay - use full Essay score
+      nilaiAkhir = Math.round(nilaiEssay);
     }
+    
+    console.log(`Bobot PG: ${bobotPG}%, Bobot Essay: ${bobotEssay}%, Nilai Akhir: ${nilaiAkhir}`);
 
     // Update submission with final score and status
     await prisma.ujianSubmission.update({

@@ -20,7 +20,7 @@ async function main() {
 
   // Clear existing data (optional - comment out if you want to keep existing data)
   console.log('🗑️  Cleaning existing data...');
-  await prisma.nilai.deleteMany();
+  await prisma.gradeConfig.deleteMany();
   await prisma.presensi.deleteMany();
   await prisma.kartuPelajar.deleteMany();
   await prisma.tugasSubmission.deleteMany();
@@ -396,9 +396,8 @@ async function main() {
       mapelId: matematika.id,
       guruId: guru1User.guru!.id,
       kelas: ['7A', '7B'],
-      tanggal: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
-      waktuMulai: '08:00',
-      durasi: 90,
+      startUjian: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000), // 14 days from now at 08:00
+      endUjian: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000 + 30 * 60 * 1000), // 14 days from now at 09:30 (90 menit)
       shuffleQuestions: false,
       showScore: true,
       status: 'aktif',
@@ -443,26 +442,11 @@ async function main() {
   console.log('✅ Created 1 ujian with 3 soal');
 
   // ============================================
-  // 10. CREATE NILAI
+  // 9. NILAI - REMOVED
   // ============================================
-  console.log('\n📊 Creating nilai...');
-  for (const siswa of allSiswa.slice(0, 5)) {
-    await prisma.nilai.create({
-      data: {
-        siswaId: siswa.id,
-        mapelId: matematika.id,
-        guruId: guru1User.guru!.id,
-        tugas: 85,
-        uts: 80,
-        uas: 88,
-        nilaiAkhir: 84,
-        semester: 'Ganjil',
-        tahunAjaran: '2024/2025',
-      },
-    });
-  }
-
-  console.log('✅ Created nilai for 5 siswa');
+  // Nilai sekarang dihitung otomatis dari UjianSubmission
+  // menggunakan bobot PG & Essay dari GradeConfig
+  console.log('ℹ️  Nilai will be calculated from ujian submissions\n');
 
   // ============================================
   // SUMMARY
@@ -480,7 +464,6 @@ async function main() {
   console.log('   - 7 Presensi (today)');
   console.log('   - 1 Tugas');
   console.log('   - 1 Ujian (with 3 soal)');
-  console.log('   - 5 Nilai records');
   console.log('\n🔑 Login Credentials:');
   console.log('   Admin: admin@school.com / admin123');
   console.log('   Guru: budi.hartono@school.com / guru123');

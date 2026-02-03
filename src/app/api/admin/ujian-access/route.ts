@@ -46,7 +46,7 @@ export async function GET() {
   }
 }
 
-// POST - Generate new token (active for 2 minutes)
+// POST - Generate new token (active for 30 minutes)
 export async function POST(request: Request) {
   try {
     const session = await getSession();
@@ -68,9 +68,9 @@ export async function POST(request: Request) {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
-    // Set expiry to 2 minutes from now
+    // Set expiry to 30 minutes from now
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes
+    const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes
 
     // Get or create the singleton record
     let accessControl = await prisma.ujianAccessControl.findFirst();
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       data: {
         token,
         expiresAt,
-        message: 'Token generated successfully. Valid for 2 minutes.',
+        message: 'Token generated successfully. Valid for 30 minutes.',
       },
     });
   } catch (error) {

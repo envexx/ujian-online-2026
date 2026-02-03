@@ -67,9 +67,8 @@ export async function GET(
           mapel: ujian.mapel.nama,
           mapelId: ujian.mapelId,
           kelas: ujian.kelas,
-          tanggal: ujian.tanggal,
-          waktuMulai: ujian.waktuMulai,
-          durasi: ujian.durasi,
+          startUjian: ujian.startUjian,
+          endUjian: ujian.endUjian,
           shuffleQuestions: ujian.shuffleQuestions,
           showScore: ujian.showScore,
           status: ujian.status,
@@ -134,9 +133,8 @@ export async function PUT(
       deskripsi, 
       mapelId, 
       kelas, 
-      tanggal, 
-      waktuMulai, 
-      durasi,
+      startUjian, 
+      endUjian,
       shuffleQuestions,
       showScore,
       status,
@@ -152,9 +150,27 @@ export async function PUT(
       );
     }
 
-    if (!durasi || durasi <= 0) {
+    // Validate startUjian and endUjian
+    if (!startUjian || !endUjian) {
       return NextResponse.json(
-        { success: false, error: 'Durasi harus lebih dari 0' },
+        { success: false, error: 'Waktu mulai dan waktu akhir ujian harus diisi' },
+        { status: 400 }
+      );
+    }
+
+    const startDate = new Date(startUjian);
+    const endDate = new Date(endUjian);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Format waktu tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    if (endDate <= startDate) {
+      return NextResponse.json(
+        { success: false, error: 'Waktu akhir harus lebih besar dari waktu mulai' },
         { status: 400 }
       );
     }
@@ -237,9 +253,8 @@ export async function PUT(
           deskripsi: deskripsi?.trim() || null,
           mapelId: mapelId || existingUjian.mapelId,
           kelas: Array.isArray(kelas) ? kelas : (kelas ? [kelas] : existingUjian.kelas),
-          tanggal: tanggal ? new Date(tanggal) : existingUjian.tanggal,
-          waktuMulai: waktuMulai || existingUjian.waktuMulai,
-          durasi: parseInt(durasi),
+          startUjian: startDate,
+          endUjian: endDate,
           shuffleQuestions: shuffleQuestions !== undefined ? shuffleQuestions : existingUjian.shuffleQuestions,
           showScore: showScore !== undefined ? showScore : existingUjian.showScore,
           status: finalStatus,

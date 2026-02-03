@@ -97,7 +97,7 @@ export async function GET(request: Request) {
           has: siswa.kelas.nama,
         },
         status: 'aktif',
-        tanggal: {
+        startUjian: {
           gte: new Date(),
         },
       },
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         mapel: true,
       },
       orderBy: {
-        tanggal: 'asc',
+        startUjian: 'asc',
       },
       take: 5,
     });
@@ -154,9 +154,8 @@ export async function GET(request: Request) {
           id: u.id,
           judul: u.judul,
           mapel: u.mapel.nama,
-          tanggal: u.tanggal,
-          waktuMulai: u.waktuMulai,
-          durasi: u.durasi,
+          startUjian: u.startUjian,
+          endUjian: u.endUjian,
           status: ujianSubmissions.find(s => s.ujianId === u.id) ? 'sudah' : 'belum',
         })),
       },

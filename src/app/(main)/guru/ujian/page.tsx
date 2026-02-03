@@ -44,11 +44,10 @@ interface Ujian {
   id: string;
   judul: string;
   deskripsi: string;
-  kelas: string;
+  kelas: string | string[];
   mapel: string;
-  tanggal: Date;
-  waktuMulai: string;
-  durasi: number;
+  startUjian: string | Date;
+  endUjian: string | Date;
   jumlahSoal: number;
   status: "draft" | "aktif" | "selesai";
   jumlahPeserta?: number;
@@ -364,16 +363,20 @@ export default function UjianGuruPage() {
                       <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground min-w-0">
                         <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                         <span className="text-xs sm:text-sm truncate">
-                          {format(new Date(u.tanggal), "dd MMM yyyy", { locale: id })}
+                          Mulai: {format(new Date(u.startUjian), "dd MMM yyyy HH:mm", { locale: id })}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground min-w-0">
                         <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">{u.waktuMulai}</span>
+                        <span className="text-xs sm:text-sm truncate">
+                          Selesai: {format(new Date(u.endUjian), "dd MMM yyyy HH:mm", { locale: id })}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground min-w-0">
                         <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">{u.durasi} menit</span>
+                        <span className="text-xs sm:text-sm truncate">
+                          {Math.round((new Date(u.endUjian).getTime() - new Date(u.startUjian).getTime()) / 60000)} menit
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground min-w-0">
                         <ListChecks className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />

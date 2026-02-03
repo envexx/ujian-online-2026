@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { TiptapEditorWithToolbar } from "@/components/tiptap";
 import { prepareContentForTipTap } from "@/components/tiptap/utils/convertMathDelimiters";
+import { TimePickerIndonesia } from "@/components/ui/time-picker-indonesia";
 import {
   Select,
   SelectContent,
@@ -87,9 +88,8 @@ interface ExamInfo {
   deskripsi: string;
   kelas: string[];
   mapelId: string;
-  tanggal: Date;
-  waktuMulai: string;
-  durasi: number;
+  startUjian: Date;
+  endUjian: Date;
   shuffleQuestions: boolean;
   showScore: boolean;
 }
@@ -114,9 +114,8 @@ export default function EditUjianPage() {
     deskripsi: "",
     kelas: [],
     mapelId: "",
-    tanggal: new Date(),
-    waktuMulai: "08:00",
-    durasi: 90,
+    startUjian: new Date(),
+    endUjian: new Date(Date.now() + 90 * 60000), // Default 90 menit dari sekarang
     shuffleQuestions: false,
     showScore: true,
   });
@@ -124,87 +123,82 @@ export default function EditUjianPage() {
   const [multipleChoice, setMultipleChoice] = useState<MultipleChoiceQuestion[]>([]);
   const [essay, setEssay] = useState<EssayQuestion[]>([]);
 
-  const { data, error, isLoading } = useSWR('/api/guru/ujian?status=all', fetcher);
+  // Fetch ujian list for kelas and mapel dropdown
+  const { data: ujianListData, error: ujianListError, isLoading: ujianListLoading } = useSWR('/api/guru/ujian?status=all', fetcher);
+  
+  // Fetch ujian detail using SWR
+  const { data: ujianDetailData, error: ujianDetailError, isLoading: ujianDetailLoading } = useSWR(
+    params.id ? `/api/guru/ujian/${params.id}` : null,
+    fetcher
+  );
 
-  // Fetch ujian data
+  // Populate form when ujian detail data is loaded
   useEffect(() => {
-    if (params.id) {
-      fetchUjianData();
-    }
-  }, [params.id]);
-
-  const fetchUjianData = async () => {
-    try {
-      setIsLoadingData(true);
-      const response = await fetch(`/api/guru/ujian/${params.id}`);
-      const result = await response.json();
+    if (ujianDetailData?.success && ujianDetailData.data) {
+      const ujianData = ujianDetailData.data;
+      const ujian = ujianData.ujian;
+      const soalPG = ujianData.soalPG || [];
+      const soalEssay = ujianData.soalEssay || [];
       
-      if (result.success) {
-        const ujianData = result.data;
-        const ujian = ujianData.ujian;
-        const soalPG = ujianData.soalPG || [];
-        const soalEssay = ujianData.soalEssay || [];
-        
-        // Populate exam info
-        setExamInfo({
-          judul: ujian.judul || "",
-          deskripsi: ujian.deskripsi || "",
-          kelas: ujian.kelas || [],
-          mapelId: ujian.mapelId || "",
-          tanggal: new Date(ujian.tanggal),
-          waktuMulai: ujian.waktuMulai || "08:00",
-          durasi: ujian.durasi || 90,
-          shuffleQuestions: ujian.shuffleQuestions || false,
-          showScore: ujian.showScore !== undefined ? ujian.showScore : true,
-        });
-        
-        // Populate multiple choice questions
-        const mcQuestions: MultipleChoiceQuestion[] = soalPG.map((soal: any, idx: number) => ({
-          id: soal.id || `pg-${idx}`,
-          question: soal.pertanyaan || "",
-          options: [
-            soal.opsiA || "",
-            soal.opsiB || "",
-            soal.opsiC || "",
-            soal.opsiD || "",
-          ],
-          correctAnswer: (soal.kunciJawaban && ['A', 'B', 'C', 'D'].includes(soal.kunciJawaban.toUpperCase())) 
-            ? soal.kunciJawaban.toUpperCase() 
-            : 'A',
-        }));
-        setMultipleChoice(mcQuestions.length > 0 ? mcQuestions : [{
-          id: "1",
-          question: "",
-          options: ["", "", "", ""],
-          correctAnswer: "A",
-        }]);
-        
-        // Populate essay questions
-        const essayQuestions: EssayQuestion[] = soalEssay.map((soal: any, idx: number) => ({
-          id: soal.id || `essay-${idx}`,
-          question: soal.pertanyaan || "",
-          answerKey: soal.kunciJawaban || "",
-        }));
-        setEssay(essayQuestions.length > 0 ? essayQuestions : [{
-          id: "1",
-          question: "",
-          answerKey: "",
-        }]);
-      }
-    } catch (error) {
-      console.error('Error fetching ujian:', error);
-      toast.error("Gagal memuat data ujian");
-    } finally {
+      // Populate exam info
+      setExamInfo({
+        judul: ujian.judul || "",
+        deskripsi: ujian.deskripsi || "",
+        kelas: ujian.kelas || [],
+        mapelId: ujian.mapelId || "",
+        startUjian: new Date(ujian.startUjian),
+        endUjian: new Date(ujian.endUjian),
+        shuffleQuestions: ujian.shuffleQuestions || false,
+        showScore: ujian.showScore !== undefined ? ujian.showScore : true,
+      });
+      
+      // Populate multiple choice questions
+      const mcQuestions: MultipleChoiceQuestion[] = soalPG.map((soal: any, idx: number) => ({
+        id: soal.id || `pg-${idx}`,
+        question: soal.pertanyaan || "",
+        options: [
+          soal.opsiA || "",
+          soal.opsiB || "",
+          soal.opsiC || "",
+          soal.opsiD || "",
+        ],
+        correctAnswer: (soal.kunciJawaban && ['A', 'B', 'C', 'D'].includes(soal.kunciJawaban.toUpperCase())) 
+          ? soal.kunciJawaban.toUpperCase() 
+          : 'A',
+      }));
+      setMultipleChoice(mcQuestions.length > 0 ? mcQuestions : [{
+        id: "1",
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: "A",
+      }]);
+      
+      // Populate essay questions
+      const essayQuestions: EssayQuestion[] = soalEssay.map((soal: any, idx: number) => ({
+        id: soal.id || `essay-${idx}`,
+        question: soal.pertanyaan || "",
+        answerKey: soal.kunciJawaban || "",
+      }));
+      setEssay(essayQuestions.length > 0 ? essayQuestions : [{
+        id: "1",
+        question: "",
+        answerKey: "",
+      }]);
+      
+      setIsLoadingData(false);
+    } else if (ujianDetailError || (ujianDetailData && !ujianDetailData.success)) {
+      toast.error(ujianDetailData?.error || "Gagal memuat data ujian");
+      router.push('/guru/ujian');
       setIsLoadingData(false);
     }
-  };
+  }, [ujianDetailData, ujianDetailError, router]);
 
   // Early returns after all hooks are called
-  if (authLoading || isLoading || isLoadingData) {
+  if (authLoading || ujianListLoading || ujianDetailLoading || isLoadingData) {
     return <LoadingSpinner />;
   }
 
-  if (error) {
+  if (ujianListError || ujianDetailError) {
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-red-600">Gagal memuat data</p>
@@ -212,8 +206,8 @@ export default function EditUjianPage() {
     );
   }
 
-  const kelasList = data?.data?.kelasList || [];
-  const mapelList = data?.data?.mapelList || [];
+  const kelasList = ujianListData?.data?.kelasList || [];
+  const mapelList = ujianListData?.data?.mapelList || [];
 
   const handleAddMultipleChoice = () => {
     setMultipleChoice([
@@ -628,9 +622,8 @@ export default function EditUjianPage() {
           deskripsi: examInfo.deskripsi,
           mapelId: examInfo.mapelId,
           kelas: examInfo.kelas,
-          tanggal: examInfo.tanggal,
-          waktuMulai: examInfo.waktuMulai,
-          durasi: examInfo.durasi,
+          startUjian: examInfo.startUjian,
+          endUjian: examInfo.endUjian,
           shuffleQuestions: examInfo.shuffleQuestions,
           showScore: examInfo.showScore,
           status: status === "publish" ? "aktif" : "draft",
@@ -769,7 +762,7 @@ export default function EditUjianPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="mapel">Mata Pelajaran</Label>
                   <Select
@@ -789,57 +782,96 @@ export default function EditUjianPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="tanggal">Tanggal Ujian</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !examInfo.tanggal && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {examInfo.tanggal ? format(examInfo.tanggal, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={examInfo.tanggal}
-                        onSelect={(date) => date && setExamInfo({ ...examInfo, tanggal: date })}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startUjian">Waktu Mulai Ujian</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="startDate" className="text-xs text-muted-foreground">Tanggal</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={examInfo.startUjian ? (() => {
+                            const d = new Date(examInfo.startUjian);
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                          })() : ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const dateStr = e.target.value;
+                              const timeStr = (() => {
+                                const d = new Date(examInfo.startUjian);
+                                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                              })();
+                              const newDate = new Date(`${dateStr}T${timeStr}`);
+                              setExamInfo({ ...examInfo, startUjian: newDate });
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <TimePickerIndonesia
+                          value={examInfo.startUjian}
+                          onChange={(date) => {
+                            setExamInfo({ ...examInfo, startUjian: date });
+                          }}
+                          placeholder="08:00"
+                          label="Waktu (24 jam)"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Format waktu: 24 jam (00:00 - 23:59). Contoh: 14:00 untuk jam 2 siang
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-
-                <div className="space-y-2">
-                  <Label htmlFor="waktuMulai">Waktu Mulai</Label>
-                  <Input
-                    id="waktuMulai"
-                    type="time"
-                    value={examInfo.waktuMulai}
-                    onChange={(e) => setExamInfo({ ...examInfo, waktuMulai: e.target.value })}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="durasi">Durasi (menit)</Label>
-                  <Input
-                    id="durasi"
-                    type="number"
-                    min="15"
-                    placeholder="90"
-                    value={examInfo.durasi}
-                    onChange={(e) => setExamInfo({ ...examInfo, durasi: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="endUjian">Waktu Akhir Ujian</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="endDate" className="text-xs text-muted-foreground">Tanggal</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={examInfo.endUjian ? (() => {
+                            const d = new Date(examInfo.endUjian);
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                          })() : ""}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const dateStr = e.target.value;
+                              const timeStr = (() => {
+                                const d = new Date(examInfo.endUjian);
+                                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                              })();
+                              const newDate = new Date(`${dateStr}T${timeStr}`);
+                              setExamInfo({ ...examInfo, endUjian: newDate });
+                            }
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <TimePickerIndonesia
+                          value={examInfo.endUjian}
+                          onChange={(date) => {
+                            setExamInfo({ ...examInfo, endUjian: date });
+                          }}
+                          placeholder="09:00"
+                          label="Waktu (24 jam)"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Format waktu: 24 jam (00:00 - 23:59). Durasi akan dihitung otomatis.
+                    </p>
+                  </div>
                 </div>
               </div>
 

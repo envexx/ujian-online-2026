@@ -64,18 +64,13 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [showQRDialog, sessionId]);
 
-  const handleTestButtonClick = async () => {
+  const handleSiswaQRClick = async () => {
     try {
-      // Generate session ID
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setSessionId(newSessionId);
-      setDeviceDetected(null);
-
-      // Generate QR code dengan URL yang akan di-scan
-      const qrData = `${window.location.origin}/api/login/scan?sessionId=${newSessionId}`;
+      // Generate QR code yang mengarah ke /siswa-login
+      const qrData = `${window.location.origin}/siswa-login`;
       const qrDataUrl = await QRCode.toDataURL(qrData, {
         width: 300,
-        margin: 1,
+        margin: 2,
         color: {
           dark: '#000000',
           light: '#FFFFFF',
@@ -84,6 +79,16 @@ export default function LoginPage() {
 
       setQrCodeDataUrl(qrDataUrl);
       setShowQRDialog(true);
+      
+      // Auto download QR code
+      const link = document.createElement('a');
+      link.href = qrDataUrl;
+      link.download = `QR-Login-Siswa-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('QR Code berhasil diunduh');
     } catch (error) {
       console.error('Error generating QR code:', error);
       toast.error('Gagal membuat QR code');
@@ -191,15 +196,27 @@ export default function LoginPage() {
               <p className="font-medium">Gunakan email yang terdaftar di sistem</p>
             </div>
 
+            <div className="text-center mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Siswa?{" "}
+                <a 
+                  href="/siswa-login" 
+                  className="text-primary hover:underline font-medium"
+                >
+                  Login dengan NISN
+                </a>
+              </p>
+            </div>
+
             <div className="mt-4 pt-4 border-t">
               <Button
                 type="button"
-                onClick={handleTestButtonClick}
+                onClick={handleSiswaQRClick}
                 variant="outline"
                 className="w-full"
               >
                 <QrCode className="w-4 h-4 mr-2" />
-                Test QR Code
+                Login Siswa QR
               </Button>
             </div>
           </form>
@@ -210,51 +227,32 @@ export default function LoginPage() {
       <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Scan QR Code</DialogTitle>
+            <DialogTitle>QR Code Login Siswa</DialogTitle>
             <DialogDescription>
-              Scan QR code ini dengan device Anda untuk mendeteksi platform
+              Scan QR code ini untuk membuka halaman login siswa dengan NISN
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center space-y-4 py-4">
             {qrCodeDataUrl && (
-              <div className="p-4 bg-white rounded-lg">
-                <img src={qrCodeDataUrl} alt="QR Code" className="w-64 h-64" />
+              <div className="p-4 bg-white rounded-lg shadow-md">
+                <img src={qrCodeDataUrl} alt="QR Code Login Siswa" className="w-64 h-64" />
               </div>
             )}
-            {deviceDetected ? (
-              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm font-medium text-green-800">
-                  ✓ Device Terdeteksi!
-                </p>
-                <p className="text-sm text-green-600 mt-1">
-                  <strong>Platform:</strong> {
-                    deviceDetected.platform === 'android' ? 'Android' :
-                    deviceDetected.platform === 'ios' ? 'iOS' :
-                    deviceDetected.platform === 'windows' ? 'Windows' :
-                    deviceDetected.platform === 'mac' ? 'macOS' :
-                    deviceDetected.platform === 'linux' ? 'Linux' :
-                    deviceDetected.platform
-                  }
-                </p>
-                <p className="text-sm text-green-600">
-                  <strong>Type:</strong> {
-                    deviceDetected.type === 'app' ? 'App' :
-                    deviceDetected.type === 'mobile' ? 'Mobile Browser' :
-                    deviceDetected.type === 'desktop' ? 'Desktop Browser' :
-                    deviceDetected.type
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-600">
-                  Menunggu scan QR code...
-                </p>
-                <p className="text-xs text-blue-500 mt-1">
-                  Buka kamera dan scan QR code di atas
-                </p>
-              </div>
-            )}
+            <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-800 mb-2">
+                📱 Cara Menggunakan:
+              </p>
+              <ol className="text-xs text-blue-600 space-y-1 ml-4 list-decimal">
+                <li>Scan QR code dengan kamera HP</li>
+                <li>Akan terbuka halaman Login Siswa</li>
+                <li>Masukkan NISN untuk login</li>
+              </ol>
+            </div>
+            <div className="w-full p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-xs text-green-600 text-center">
+                ✓ QR Code sudah otomatis terunduh
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

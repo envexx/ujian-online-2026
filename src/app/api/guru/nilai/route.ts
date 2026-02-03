@@ -78,12 +78,6 @@ export async function GET(request: Request) {
         kelasId: kelasId,
       },
       include: {
-        nilai: {
-          where: {
-            mapelId: mapelId,
-            guruId: guru.id,
-          },
-        },
         tugasSubmission: {
           include: {
             tugas: {
@@ -174,71 +168,72 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await getSession();
+// TODO: Implement Nilai model in Prisma schema before enabling this endpoint
+// export async function POST(request: Request) {
+//   try {
+//     const session = await getSession();
 
-    if (!session.isLoggedIn || session.role !== 'GURU') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+//     if (!session.isLoggedIn || session.role !== 'GURU') {
+//       return NextResponse.json(
+//         { success: false, error: 'Unauthorized' },
+//         { status: 401 }
+//       );
+//     }
 
-    const body = await request.json();
-    const { siswaId, mapelId, tugas, uts, uas, nilaiAkhir, semester, tahunAjaran } = body;
+//     const body = await request.json();
+//     const { siswaId, mapelId, tugas, uts, uas, nilaiAkhir, semester, tahunAjaran } = body;
 
-    // Get guru data
-    const guru = await prisma.guru.findFirst({
-      where: { userId: session.userId },
-    });
+//     // Get guru data
+//     const guru = await prisma.guru.findFirst({
+//       where: { userId: session.userId },
+//     });
 
-    if (!guru) {
-      return NextResponse.json(
-        { success: false, error: 'Guru not found' },
-        { status: 404 }
-      );
-    }
+//     if (!guru) {
+//       return NextResponse.json(
+//         { success: false, error: 'Guru not found' },
+//         { status: 404 }
+//       );
+//     }
 
-    // Upsert nilai
-    const nilai = await prisma.nilai.upsert({
-      where: {
-        siswaId_mapelId_semester_tahunAjaran: {
-          siswaId,
-          mapelId,
-          semester: semester || 'Ganjil',
-          tahunAjaran: tahunAjaran || '2024/2025',
-        },
-      },
-      update: {
-        tugas,
-        uts,
-        uas,
-        nilaiAkhir,
-      },
-      create: {
-        siswaId,
-        mapelId,
-        guruId: guru.id,
-        tugas,
-        uts,
-        uas,
-        nilaiAkhir,
-        semester: semester || 'Ganjil',
-        tahunAjaran: tahunAjaran || '2024/2025',
-      },
-    });
+//     // Upsert nilai
+//     const nilai = await prisma.nilai.upsert({
+//       where: {
+//         siswaId_mapelId_semester_tahunAjaran: {
+//           siswaId,
+//           mapelId,
+//           semester: semester || 'Ganjil',
+//           tahunAjaran: tahunAjaran || '2024/2025',
+//         },
+//       },
+//       update: {
+//         tugas,
+//         uts,
+//         uas,
+//         nilaiAkhir,
+//       },
+//       create: {
+//         siswaId,
+//         mapelId,
+//         guruId: guru.id,
+//         tugas,
+//         uts,
+//         uas,
+//         nilaiAkhir,
+//         semester: semester || 'Ganjil',
+//         tahunAjaran: tahunAjaran || '2024/2025',
+//       },
+//     });
 
-    return NextResponse.json({
-      success: true,
-      data: nilai,
-      message: 'Nilai berhasil disimpan',
-    });
-  } catch (error) {
-    console.error('Error saving nilai:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to save nilai' },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json({
+//       success: true,
+//       data: nilai,
+//       message: 'Nilai berhasil disimpan',
+//     });
+//   } catch (error) {
+//     console.error('Error saving nilai:', error);
+//     return NextResponse.json(
+//       { success: false, error: 'Failed to save nilai' },
+//       { status: 500 }
+//     );
+//   }
+// }

@@ -65,7 +65,7 @@ export default function UjianDetailPage() {
         <div>
           <h1 className="text-3xl font-bold">{ujian.judul}</h1>
           <p className="text-muted-foreground">
-            {ujian.kelas.join(", ")} • {ujian.mapel} • {format(new Date(ujian.tanggal), "dd MMMM yyyy", { locale: id })} • {ujian.waktuMulai} • {ujian.durasi} menit
+            {ujian.kelas.join(", ")} • {ujian.mapel} • {format(new Date(ujian.startUjian), "dd MMMM yyyy HH:mm", { locale: id })} - {format(new Date(ujian.endUjian), "dd MMMM yyyy HH:mm", { locale: id })} • {Math.round((new Date(ujian.endUjian).getTime() - new Date(ujian.startUjian).getTime()) / 60000)} menit
           </p>
         </div>
       </div>
