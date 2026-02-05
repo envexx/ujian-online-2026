@@ -12,7 +12,7 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+export default function AdminGuruLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

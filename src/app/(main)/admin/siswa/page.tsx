@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useSiswa, useKelas } from "@/hooks/useSWR";
 import { LoadingSpinner, ErrorState } from "@/components/ui/loading-spinner";
@@ -45,6 +45,14 @@ export default function SiswaPage() {
     open: false,
     siswa: null,
   });
+  const [importDialog, setImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResults, setImportResults] = useState<{
+    success: number;
+    failed: number;
+    errors: string[];
+  } | null>(null);
   const [formData, setFormData] = useState({
     nis: "",
     nisn: "",
@@ -157,6 +165,72 @@ export default function SiswaPage() {
     s.nisn?.includes(searchQuery)
   );
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch('/api/admin/siswa/template');
+      if (!response.ok) {
+        toast.error('Gagal mengunduh template');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Template_Import_Siswa.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Template berhasil diunduh');
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      toast.error('Terjadi kesalahan saat mengunduh template');
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error('Pilih file terlebih dahulu');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportResults(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const response = await fetch('/api/admin/siswa/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setImportResults(result.data);
+        toast.success(result.message);
+        mutate();
+        if (result.data.failed === 0) {
+          setImportDialog(false);
+          setImportFile(null);
+        }
+      } else {
+        toast.error(result.error || 'Gagal mengimport data');
+        if (result.data) {
+          setImportResults(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error importing:', error);
+      toast.error('Terjadi kesalahan saat import');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,10 +238,26 @@ export default function SiswaPage() {
           <h1 className="text-3xl font-bold">Data Siswa</h1>
           <p className="text-muted-foreground">Kelola data siswa sekolah</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Siswa
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadTemplate}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download Template
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setImportDialog(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Siswa
+          </Button>
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Siswa
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -393,6 +483,92 @@ export default function SiswaPage() {
         description="Apakah Anda yakin ingin menghapus siswa"
         itemName={deleteModal.siswa?.nama}
       />
+
+      {/* Import Dialog */}
+      <Dialog open={importDialog} onOpenChange={setImportDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Siswa dari Excel</DialogTitle>
+            <DialogDescription>
+              Upload file Excel yang berisi data siswa. Pastikan format sesuai dengan template.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-file">File Excel (.xlsx atau .xls)</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setImportFile(file);
+                    setImportResults(null);
+                  }
+                }}
+                disabled={isImporting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Format file harus sesuai dengan template. Download template terlebih dahulu jika belum punya.
+              </p>
+            </div>
+
+            {importResults && (
+              <div className="space-y-2 p-4 border rounded-lg">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-600">
+                      Berhasil: {importResults.success}
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-600">
+                      Gagal: {importResults.failed}
+                    </p>
+                  </div>
+                </div>
+                {importResults.errors.length > 0 && (
+                  <div className="mt-2 max-h-40 overflow-y-auto">
+                    <p className="text-xs font-medium mb-1">Detail Error:</p>
+                    <ul className="text-xs text-red-600 space-y-1 list-disc list-inside">
+                      {importResults.errors.slice(0, 10).map((error, idx) => (
+                        <li key={idx}>{error}</li>
+                      ))}
+                      {importResults.errors.length > 10 && (
+                        <li className="text-muted-foreground">
+                          ... dan {importResults.errors.length - 10} error lainnya
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setImportDialog(false);
+                  setImportFile(null);
+                  setImportResults(null);
+                }}
+                disabled={isImporting}
+              >
+                Tutup
+              </Button>
+              <Button 
+                onClick={handleImport}
+                disabled={!importFile || isImporting}
+              >
+                {isImporting ? 'Mengimport...' : 'Import'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

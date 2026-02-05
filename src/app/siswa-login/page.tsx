@@ -133,7 +133,7 @@ export default function SiswaLoginPage() {
               <p className="text-sm text-muted-foreground">
                 Bukan siswa?{" "}
                 <a 
-                  href="/login" 
+                  href="/admin-guru" 
                   className="text-primary hover:underline font-medium"
                 >
                   Login sebagai Guru/Admin

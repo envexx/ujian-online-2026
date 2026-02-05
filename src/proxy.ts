@@ -4,9 +4,8 @@ import type { NextRequest } from 'next/server';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for public routes
-  const publicRoutes = ['/login', '/api/auth'];
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  // Skip middleware for public routes (root is now login siswa page)
+  if (pathname === '/' || pathname.startsWith('/admin-guru') || pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
 
@@ -24,8 +23,8 @@ export async function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get('e-learning-session');
   
   if (!sessionCookie) {
-    // No session cookie, redirect to login
-    const loginUrl = new URL('/login', request.url);
+    // No session cookie, redirect to admin-guru login
+    const loginUrl = new URL('/admin-guru', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }

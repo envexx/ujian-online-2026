@@ -53,7 +53,7 @@ export function useAuth(requireAuth = true) {
 
   // Redirect to login if auth is required but user is not authenticated
   if (requireAuth && !isLoading && !isAuthenticated) {
-    router.push('/login');
+    router.push('/admin-guru');
   }
 
   const login = async (email: string, password: string) => {
@@ -97,7 +97,7 @@ export function useAuth(requireAuth = true) {
       if (response.ok && result.success) {
         await mutate(undefined, false);
         toast.success('Logout berhasil');
-        router.push('/login');
+        router.push('/admin-guru');
         return { success: true };
       } else {
         toast.error('Logout gagal');
