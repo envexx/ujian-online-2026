@@ -40,12 +40,12 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Copy Prisma files and CLI for migrations and seeding
-# Copy the entire node_modules from standalone build (includes dependencies)
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps /app/node_modules/tsx ./node_modules/tsx
-COPY --from=deps /app/node_modules/.bin ./node_modules/.bin
+# Copy from builder stage (after prisma generate has run)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 # Copy Prisma schema and seed files
 COPY --from=builder /app/prisma ./prisma
