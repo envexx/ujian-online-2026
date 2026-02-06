@@ -541,11 +541,36 @@ export default function SiswaUjianHasilPage() {
                         <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground mb-1 sm:mb-2 uppercase tracking-wide">
                           Jawaban Anda:
                         </p>
-                        <p className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
-                          {userAnswer || (
-                            <span className="text-muted-foreground italic">Tidak dijawab</span>
-                          )}
-                        </p>
+                        {userAnswer && (userAnswer.startsWith('http://') || userAnswer.startsWith('https://')) ? (
+                          <div className="space-y-2">
+                            <img
+                              src={userAnswer}
+                              alt="Jawaban essay"
+                              className="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                const fallback = document.createElement('p');
+                                fallback.className = 'text-xs sm:text-sm text-red-600';
+                                fallback.textContent = 'Gagal memuat gambar';
+                                (e.target as HTMLImageElement).parentElement?.appendChild(fallback);
+                              }}
+                            />
+                            <a
+                              href={userAnswer}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              Buka gambar di tab baru
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
+                            {userAnswer || (
+                              <span className="text-muted-foreground italic">Tidak dijawab</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       {isPending && (
                         <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">

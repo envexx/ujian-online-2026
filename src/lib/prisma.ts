@@ -8,9 +8,12 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Create connection pool
+// For Coolify databases, SSL might not be required
 const pool = globalForPrisma.pool ?? new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  // Disable SSL for Coolify (set to false if SSL is not supported)
+  // Set to { rejectUnauthorized: false } if SSL is required
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
 // Create adapter

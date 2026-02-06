@@ -119,7 +119,7 @@ export async function GET(
     }
 
     // Prepare soal data
-    let soalPG = ujian.soalPilihanGanda.map((s, idx) => ({
+    let soalPG = (ujian.soalPilihanGanda || []).map((s, idx) => ({
       id: s.id,
       nomor: idx + 1,
       pertanyaan: s.pertanyaan,
@@ -129,11 +129,19 @@ export async function GET(
       opsiD: s.opsiD,
     }));
 
-    let soalEssay = ujian.soalEssay.map((s, idx) => ({
+    let soalEssay = (ujian.soalEssay || []).map((s, idx) => ({
       id: s.id,
       nomor: idx + 1,
       pertanyaan: s.pertanyaan,
     }));
+
+    // Debug log
+    console.log('API Response - Soal data:', {
+      soalPGCount: soalPG.length,
+      soalEssayCount: soalEssay.length,
+      soalPGFirst: soalPG[0],
+      soalEssayFirst: soalEssay[0],
+    });
 
     // Shuffle questions if shuffleQuestions is enabled
     // Note: Shuffle is done in frontend to ensure each student gets different order

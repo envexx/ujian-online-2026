@@ -567,9 +567,20 @@ export default function UjianNilaiPage() {
                           return (
                             <TableCell key={`essay-${i}`} className="text-xs">
                               {jawaban?.jawaban ? (
-                                <div className="max-w-[200px] truncate" title={jawaban.jawaban}>
-                                  {jawaban.jawaban}
-                                </div>
+                                jawaban.jawaban.startsWith('http://') || jawaban.jawaban.startsWith('https://') ? (
+                                  <div className="max-w-[200px]">
+                                    <img
+                                      src={jawaban.jawaban}
+                                      alt="Jawaban"
+                                      className="max-w-full h-auto rounded border border-gray-300"
+                                      style={{ maxHeight: '100px' }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="max-w-[200px] truncate" title={jawaban.jawaban}>
+                                    {jawaban.jawaban}
+                                  </div>
+                                )
                               ) : '-'}
                             </TableCell>
                           );
@@ -607,7 +618,32 @@ export default function UjianNilaiPage() {
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded">
                   <p className="text-xs font-semibold text-blue-700 mb-1">Jawaban Siswa:</p>
-                  <p className="text-sm text-blue-900 whitespace-pre-wrap">{grade.jawaban || '(Tidak ada jawaban)'}</p>
+                  {grade.jawaban && (grade.jawaban.startsWith('http://') || grade.jawaban.startsWith('https://')) ? (
+                    <div className="space-y-2">
+                      <img
+                        src={grade.jawaban}
+                        alt="Jawaban essay siswa"
+                        className="max-w-full h-auto rounded-lg border border-blue-300 shadow-sm"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          const fallback = document.createElement('p');
+                          fallback.className = 'text-sm text-red-600';
+                          fallback.textContent = 'Gagal memuat gambar';
+                          (e.target as HTMLImageElement).parentElement?.appendChild(fallback);
+                        }}
+                      />
+                      <a
+                        href={grade.jawaban}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        Buka gambar di tab baru
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-blue-900 whitespace-pre-wrap">{grade.jawaban || '(Tidak ada jawaban)'}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

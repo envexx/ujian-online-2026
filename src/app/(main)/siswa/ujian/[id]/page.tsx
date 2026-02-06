@@ -180,6 +180,16 @@ export default function SiswaUjianDetailPage() {
     };
   }, []);
 
+  // Ensure currentQuestion is within valid range
+  useEffect(() => {
+    if (!ujianData) return;
+    const { soalPG, soalEssay } = ujianData;
+    const allQuestions = [...(soalPG || []), ...(soalEssay || [])];
+    if (allQuestions.length > 0 && currentQuestion >= allQuestions.length) {
+      setCurrentQuestion(Math.max(0, allQuestions.length - 1));
+    }
+  }, [ujianData, currentQuestion]);
+
   // Handle auto-submit (dipanggil saat waktu habis)
   const handleAutoSubmit = React.useCallback(async () => {
     // GUARD: Jangan submit jika masih initial load
@@ -332,6 +342,25 @@ export default function SiswaUjianDetailPage() {
       if (result.success) {
         let processedData = { ...result.data };
         
+        // Debug: Log data yang diterima
+        console.log('Data ujian diterima:', {
+          hasUjian: !!processedData.ujian,
+          soalPGCount: processedData.soalPG?.length || 0,
+          soalEssayCount: processedData.soalEssay?.length || 0,
+          soalPG: processedData.soalPG,
+          soalEssay: processedData.soalEssay,
+        });
+        
+        // Guard: Pastikan soalPG dan soalEssay adalah array
+        if (!Array.isArray(processedData.soalPG)) {
+          console.warn('soalPG is not an array:', processedData.soalPG);
+          processedData.soalPG = [];
+        }
+        if (!Array.isArray(processedData.soalEssay)) {
+          console.warn('soalEssay is not an array:', processedData.soalEssay);
+          processedData.soalEssay = [];
+        }
+        
         // Check if shuffleQuestions is enabled
         if (result.data.ujian?.shuffleQuestions) {
           // Check if shuffled order already exists in localStorage (to maintain consistency on reload)
@@ -344,27 +373,39 @@ export default function SiswaUjianDetailPage() {
               const { soalPGOrder, soalEssayOrder } = JSON.parse(storedShuffle);
               
               // Reorder soal PG based on stored order
-              if (processedData.soalPG && processedData.soalPG.length > 0 && soalPGOrder) {
+              if (processedData.soalPG && processedData.soalPG.length > 0 && soalPGOrder && Array.isArray(soalPGOrder)) {
                 const soalPGMap = new Map(processedData.soalPG.map((s: any) => [s.id, s]));
-                processedData.soalPG = soalPGOrder
+                const reorderedPG = soalPGOrder
                   .map((id: string) => soalPGMap.get(id))
-                  .filter((s: any) => s !== undefined)
-                  .map((soal: any, idx: number) => ({
+                  .filter((s: any) => s !== undefined);
+                
+                // Only use reordered if we got all questions, otherwise use original
+                if (reorderedPG.length === processedData.soalPG.length) {
+                  processedData.soalPG = reorderedPG.map((soal: any, idx: number) => ({
                     ...soal,
                     nomor: idx + 1,
                   }));
+                } else {
+                  console.warn('Stored PG order tidak match, menggunakan urutan asli');
+                }
               }
               
               // Reorder soal Essay based on stored order
-              if (processedData.soalEssay && processedData.soalEssay.length > 0 && soalEssayOrder) {
+              if (processedData.soalEssay && processedData.soalEssay.length > 0 && soalEssayOrder && Array.isArray(soalEssayOrder)) {
                 const soalEssayMap = new Map(processedData.soalEssay.map((s: any) => [s.id, s]));
-                processedData.soalEssay = soalEssayOrder
+                const reorderedEssay = soalEssayOrder
                   .map((id: string) => soalEssayMap.get(id))
-                  .filter((s: any) => s !== undefined)
-                  .map((soal: any, idx: number) => ({
+                  .filter((s: any) => s !== undefined);
+                
+                // Only use reordered if we got all questions, otherwise use original
+                if (reorderedEssay.length === processedData.soalEssay.length) {
+                  processedData.soalEssay = reorderedEssay.map((soal: any, idx: number) => ({
                     ...soal,
                     nomor: idx + 1,
                   }));
+                } else {
+                  console.warn('Stored Essay order tidak match, menggunakan urutan asli');
+                }
               }
               
               console.log('Menggunakan urutan soal yang sudah di-shuffle sebelumnya');
@@ -407,6 +448,41 @@ export default function SiswaUjianDetailPage() {
           }
         }
         
+        // Final check: Pastikan data valid sebelum di-set
+        console.log('Data sebelum di-set ke state:', {
+          hasUjian: !!processedData.ujian,
+          soalPGCount: processedData.soalPG?.length || 0,
+          soalEssayCount: processedData.soalEssay?.length || 0,
+          soalPGIsArray: Array.isArray(processedData.soalPG),
+          soalEssayIsArray: Array.isArray(processedData.soalEssay),
+          rawSoalPG: processedData.soalPG,
+          rawSoalEssay: processedData.soalEssay,
+        });
+        
+        // Ensure arrays are always arrays and not null/undefined
+        if (!Array.isArray(processedData.soalPG)) {
+          console.warn('soalPG is not array, converting:', processedData.soalPG);
+          processedData.soalPG = [];
+        }
+        if (!Array.isArray(processedData.soalEssay)) {
+          console.warn('soalEssay is not array, converting:', processedData.soalEssay);
+          processedData.soalEssay = [];
+        }
+        
+        // Final validation: Pastikan minimal ada 1 soal
+        const totalSoal = processedData.soalPG.length + processedData.soalEssay.length;
+        if (totalSoal === 0) {
+          console.error('ERROR: Tidak ada soal setelah processing!', {
+            originalSoalPG: result.data.soalPG,
+            originalSoalEssay: result.data.soalEssay,
+            processedSoalPG: processedData.soalPG,
+            processedSoalEssay: processedData.soalEssay,
+          });
+          toast.error('Tidak ada soal dalam ujian ini. Silakan hubungi administrator.');
+          return;
+        }
+        
+        console.log('Data valid, setting to state. Total soal:', totalSoal);
         setUjianData(processedData);
         
         // Check if already submitted
@@ -592,26 +668,58 @@ export default function SiswaUjianDetailPage() {
     reader.readAsDataURL(file);
   };
 
-  const processImage = (imageSrc: string, questionId: string) => {
-    // Store image as base64
-    const newImages = { ...essayImages, [questionId]: imageSrc };
-    setEssayImages(newImages);
-    // Set input mode to image
-    const newModes: { [key: string]: 'text' | 'image' } = { ...essayInputMode, [questionId]: 'image' as const };
-    setEssayInputMode(newModes);
-    // Save base64 image as answer
-    handleAnswerChange(questionId, imageSrc, 'essay');
-    // Save to localStorage
+  const processImage = async (imageSrc: string, questionId: string) => {
     try {
-      localStorage.setItem(getImagesStorageKey(), JSON.stringify(newImages));
-      localStorage.setItem(getInputModeStorageKey(), JSON.stringify(newModes));
-    } catch (error) {
-      console.error('Error saving images to localStorage:', error);
+      // Show loading
+      toast.loading('Mengupload foto ke server...', { id: 'upload-image' });
+
+      // Upload to R2
+      const response = await fetch('/api/upload/r2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: imageSrc,
+          fileName: `essay-${questionId}`,
+          folder: 'essay-answers',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Gagal mengupload foto');
+      }
+
+      const imageUrl = result.data.url;
+
+      // Store image URL (not base64)
+      const newImages = { ...essayImages, [questionId]: imageUrl };
+      setEssayImages(newImages);
+      
+      // Set input mode to image
+      const newModes: { [key: string]: 'text' | 'image' } = { ...essayInputMode, [questionId]: 'image' as const };
+      setEssayInputMode(newModes);
+      
+      // Save image URL as answer (not base64)
+      handleAnswerChange(questionId, imageUrl, 'essay');
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem(getImagesStorageKey(), JSON.stringify(newImages));
+        localStorage.setItem(getInputModeStorageKey(), JSON.stringify(newModes));
+      } catch (error) {
+        console.error('Error saving images to localStorage:', error);
+      }
+      
+      // Close dialog
+      setShowCameraDialog(false);
+      setCameraQuestionId(null);
+      
+      toast.success('Foto berhasil diupload dan disimpan', { id: 'upload-image' });
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast.error(error.message || 'Gagal mengupload foto. Silakan coba lagi.', { id: 'upload-image' });
     }
-    // Close dialog
-    setShowCameraDialog(false);
-    setCameraQuestionId(null);
-    toast.success('Foto berhasil ditambahkan');
   };
 
   const handleAnswerChange = (questionId: string, answer: string, questionType: 'multiple_choice' | 'essay') => {
@@ -647,7 +755,7 @@ export default function SiswaUjianDetailPage() {
     if (!ujianData) return { valid: false, message: "" };
     
     const { soalPG, soalEssay } = ujianData;
-    const allQuestions = [...soalPG, ...soalEssay];
+    const allQuestions = [...(soalPG || []), ...(soalEssay || [])];
     const unansweredQuestions: number[] = [];
 
     allQuestions.forEach((q: any, idx: number) => {
@@ -816,10 +924,81 @@ export default function SiswaUjianDetailPage() {
     );
   }
 
+  // Guard: Pastikan ujianData memiliki struktur yang benar
+  if (!ujianData || !ujianData.ujian) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Data ujian tidak valid</p>
+        </div>
+      </div>
+    );
+  }
+
   const { ujian, soalPG, soalEssay, examEndTime } = ujianData;
-  const allQuestions = [...soalPG, ...soalEssay];
-  const currentQ = allQuestions[currentQuestion];
-  const isPG = currentQuestion < soalPG.length;
+  
+  // Guard: Pastikan ujian ada
+  if (!ujian) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Data ujian tidak valid</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Guard: Pastikan soalPG dan soalEssay adalah array
+  const safeSoalPG = Array.isArray(soalPG) ? soalPG : [];
+  const safeSoalEssay = Array.isArray(soalEssay) ? soalEssay : [];
+  const allQuestions = [...safeSoalPG, ...safeSoalEssay];
+  
+  // Debug: Log untuk troubleshooting
+  console.log('Rendering check:', {
+    soalPGType: typeof soalPG,
+    soalPGIsArray: Array.isArray(soalPG),
+    soalPGLength: soalPG?.length,
+    safeSoalPGLength: safeSoalPG.length,
+    soalEssayType: typeof soalEssay,
+    soalEssayIsArray: Array.isArray(soalEssay),
+    soalEssayLength: soalEssay?.length,
+    safeSoalEssayLength: safeSoalEssay.length,
+    allQuestionsLength: allQuestions.length,
+    ujianDataKeys: Object.keys(ujianData || {}),
+  });
+  
+  // Guard: Pastikan ada soal
+  if (allQuestions.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <p className="text-red-600 font-bold">Tidak ada soal dalam ujian ini</p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>Debug Info:</p>
+            <p>soalPG: {soalPG ? `${Array.isArray(soalPG) ? soalPG.length : 'not array'}` : 'null/undefined'}</p>
+            <p>soalEssay: {soalEssay ? `${Array.isArray(soalEssay) ? soalEssay.length : 'not array'}` : 'null/undefined'}</p>
+            <p>ujianData keys: {ujianData ? Object.keys(ujianData).join(', ') : 'null'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Guard: Pastikan currentQuestion dalam range
+  const safeCurrentQuestion = Math.max(0, Math.min(currentQuestion, allQuestions.length - 1));
+  const currentQ = allQuestions[safeCurrentQuestion];
+  const isPG = safeCurrentQuestion < safeSoalPG.length;
+
+  // Guard: Jika currentQ tidak ada atau tidak memiliki pertanyaan, tampilkan error
+  if (!currentQ || !currentQ.pertanyaan) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Data soal tidak valid</p>
+        </div>
+      </div>
+    );
+  }
 
   // Get waktu mulai dan akhir ujian dari database
   const startTime = new Date(ujian.startUjian);
@@ -942,7 +1121,7 @@ export default function SiswaUjianDetailPage() {
           <div className="flex-1 min-w-0">
             <h2 className="text-base sm:text-lg font-bold truncate">{ujian.judul}</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Soal {currentQuestion + 1} dari {allQuestions.length}
+              Soal {safeCurrentQuestion + 1} dari {allQuestions.length}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1201,15 +1380,15 @@ export default function SiswaUjianDetailPage() {
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 sm:pt-6 border-t">
               <Button
                 variant="outline"
-                onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
-                disabled={currentQuestion === 0}
+                onClick={() => setCurrentQuestion(Math.max(0, safeCurrentQuestion - 1))}
+                disabled={safeCurrentQuestion === 0}
                 className="w-full sm:w-auto"
                 size="sm"
               >
                 Sebelumnya
               </Button>
 
-              {currentQuestion === allQuestions.length - 1 ? (
+              {safeCurrentQuestion === allQuestions.length - 1 ? (
                 <Button 
                   onClick={handleSubmitClick}
                   disabled={isSubmitting}
@@ -1221,7 +1400,7 @@ export default function SiswaUjianDetailPage() {
                 </Button>
               ) : (
                 <Button 
-                  onClick={() => setCurrentQuestion(currentQuestion + 1)}
+                  onClick={() => setCurrentQuestion(Math.min(allQuestions.length - 1, safeCurrentQuestion + 1))}
                   className="w-full sm:w-auto"
                   size="sm"
                 >
@@ -1239,7 +1418,7 @@ export default function SiswaUjianDetailPage() {
               {allQuestions.map((q, idx) => (
                 <Button
                   key={q.id}
-                  variant={idx === currentQuestion ? "default" : answers[q.id] ? "secondary" : "outline"}
+                  variant={idx === safeCurrentQuestion ? "default" : answers[q.id] ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setCurrentQuestion(idx)}
                   className="w-full h-8 sm:h-9 text-xs sm:text-sm"
