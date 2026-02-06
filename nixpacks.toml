@@ -1,0 +1,25 @@
+# Nixpacks configuration for Coolify
+# This file tells Nixpacks how to build the application
+# Node.js 20 is required for Prisma and Next.js 16
+
+[phases.setup]
+nixPkgs = ["nodejs-20_x"]
+
+[phases.install]
+cmds = [
+  "npm ci"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]
+
+[start]
+cmd = "npm start"
+
+# Environment variables (non-sensitive only)
+# Secrets should be set in Coolify dashboard, not here
+[variables]
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
