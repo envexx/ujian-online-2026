@@ -44,6 +44,13 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
+// Helper function to strip HTML tags for clean display
+const stripHtmlTags = (html: string): string => {
+  if (!html) return '';
+  // Remove HTML tags using regex
+  return html.replace(/<[^>]*>/g, '').trim();
+};
+
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
@@ -289,7 +296,7 @@ export default function UjianNilaiPage() {
         // Add Essay answers
         soalEssayData.forEach((soal: any, i: number) => {
           const jawaban = s.jawabanEssay?.find((j: any) => j.soalId === soal.id);
-          row[`Essay${i + 1}`] = jawaban?.jawaban || '-';
+          row[`Essay${i + 1}`] = jawaban?.jawaban ? stripHtmlTags(jawaban.jawaban) : '-';
         });
         
         return row;
@@ -558,7 +565,7 @@ export default function UjianNilaiPage() {
                                 jawaban ? 'bg-red-50 text-red-700' : ''
                               }`}
                             >
-                              {jawaban?.jawaban || '-'}
+                              {jawaban?.jawaban ? stripHtmlTags(jawaban.jawaban) : '-'}
                             </TableCell>
                           );
                         })}
@@ -577,8 +584,8 @@ export default function UjianNilaiPage() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="max-w-[200px] truncate" title={jawaban.jawaban}>
-                                    {jawaban.jawaban}
+                                  <div className="max-w-[200px] truncate" title={stripHtmlTags(jawaban.jawaban)}>
+                                    {stripHtmlTags(jawaban.jawaban)}
                                   </div>
                                 )
                               ) : '-'}
@@ -608,12 +615,12 @@ export default function UjianNilaiPage() {
               <div key={grade.soalId} className="p-4 border rounded-lg space-y-3">
                 <div>
                   <p className="font-semibold text-sm mb-2">Soal {index + 1}:</p>
-                  <p className="text-sm">{grade.pertanyaan}</p>
+                  <p className="text-sm">{stripHtmlTags(grade.pertanyaan)}</p>
                 </div>
 
                 <div className="p-3 bg-green-50 border border-green-200 rounded">
                   <p className="text-xs font-semibold text-green-700 mb-1">Kunci Jawaban:</p>
-                  <p className="text-sm text-green-900 whitespace-pre-wrap">{grade.kunciJawaban}</p>
+                  <p className="text-sm text-green-900 whitespace-pre-wrap">{stripHtmlTags(grade.kunciJawaban)}</p>
                 </div>
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded">
@@ -642,7 +649,7 @@ export default function UjianNilaiPage() {
                       </a>
                     </div>
                   ) : (
-                    <p className="text-sm text-blue-900 whitespace-pre-wrap">{grade.jawaban || '(Tidak ada jawaban)'}</p>
+                    <p className="text-sm text-blue-900 whitespace-pre-wrap">{stripHtmlTags(grade.jawaban) || '(Tidak ada jawaban)'}</p>
                   )}
                 </div>
 

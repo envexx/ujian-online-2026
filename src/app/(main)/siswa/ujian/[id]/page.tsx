@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +27,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { examQueue, generateChecksum } from "@/lib/exam-queue";
-import Webcam from "react-webcam";
 
 export default function SiswaUjianDetailPage() {
   const router = useRouter();
@@ -48,12 +47,15 @@ export default function SiswaUjianDetailPage() {
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [essayImages, setEssayImages] = useState<{ [key: string]: string }>({}); // Store base64 images for essay
   const [essayInputMode, setEssayInputMode] = useState<{ [key: string]: 'text' | 'image' }>({}); // Input mode per question
-  const [showCameraDialog, setShowCameraDialog] = useState(false);
-  const [cameraQuestionId, setCameraQuestionId] = useState<string | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
-  const webcamRef = useRef<Webcam>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCameraModal, setShowCameraModal] = useState(false); // Modal webcam
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null); // Preview foto yang diambil
+  const [cameraQuestionId, setCameraQuestionId] = useState<string | null>(null); // ID soal untuk foto
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false); // Status upload
+  const [cameraLoading, setCameraLoading] = useState(true); // Loading state untuk webcam
+  const [cameraError, setCameraError] = useState<string | null>(null); // Error state untuk webcam
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null); // WebRTC stream
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Queue-based auto-save states
   const [queueStatus, setQueueStatus] = useState({ total: 0, saved: 0, pending: 0, saving: 0, failed: 0 });
@@ -593,79 +595,129 @@ export default function SiswaUjianDetailPage() {
   };
 
   // Check camera availability
-  useEffect(() => {
-    if (showCameraDialog) {
-      navigator.mediaDevices
-        .getUserMedia({ video: true })
-        .then(() => {
-          setCameraAvailable(true);
-          setCameraError(null);
-        })
-        .catch((error) => {
-          console.error('Camera access error:', error);
-          setCameraAvailable(false);
-          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-            setCameraError('Akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser.');
-          } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-            setCameraError('Kamera tidak ditemukan. Gunakan opsi upload file sebagai alternatif.');
-          } else {
-            setCameraError('Tidak dapat mengakses kamera. Gunakan opsi upload file sebagai alternatif.');
-          }
-        });
-    } else {
-      setCameraError(null);
-      setCameraAvailable(null);
-    }
-  }, [showCameraDialog]);
-
-  const capturePhoto = () => {
-    if (!webcamRef.current || !cameraQuestionId) return null;
+  // Fungsi untuk start kamera dengan WebRTC
+  const startCamera = async () => {
+    setCameraLoading(true);
+    setCameraError(null);
+    
     try {
-      const imageSrc = webcamRef.current.getScreenshot();
-      return imageSrc;
-    } catch (error) {
-      console.error('Error capturing photo:', error);
-      return null;
-    }
-  };
-
-  const handleCapturePhoto = () => {
-    const imageSrc = capturePhoto();
-    if (imageSrc && cameraQuestionId) {
-      processImage(imageSrc, cameraQuestionId);
-    } else {
-      toast.error('Gagal mengambil foto. Coba lagi atau gunakan opsi upload file.');
-    }
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !cameraQuestionId) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('File harus berupa gambar');
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 10MB');
-      return;
-    }
-
-    // Read file as base64
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      if (imageSrc) {
-        processImage(imageSrc, cameraQuestionId);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment", // Gunakan kamera belakang
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        },
+        audio: false
+      });
+      
+      setCameraStream(stream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
       }
-    };
-    reader.onerror = () => {
-      toast.error('Gagal membaca file');
-    };
-    reader.readAsDataURL(file);
+      
+      setCameraLoading(false);
+      setCameraError(null);
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      setCameraLoading(false);
+      
+      const errorName = error.name || String(error);
+      if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+        setCameraError('Akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser Anda.');
+      } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
+        setCameraError('Kamera tidak ditemukan pada perangkat Anda.');
+      } else {
+        setCameraError('Tidak dapat mengakses kamera. Pastikan kamera tidak digunakan aplikasi lain.');
+      }
+    }
+  };
+
+  // Fungsi untuk stop kamera
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Fungsi untuk membuka modal kamera
+  const openCameraModal = (questionId: string) => {
+    setCameraQuestionId(questionId);
+    setCapturedPhoto(null); // Reset captured photo
+    setShowCameraModal(true);
+    // Start camera setelah modal terbuka
+    setTimeout(() => {
+      startCamera();
+    }, 100);
+  };
+
+  // Fungsi untuk capture foto dari video stream
+  const handleCapturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error('Kamera tidak siap. Coba lagi.');
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // Set canvas size sesuai video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame ke canvas
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert canvas ke base64
+      const imageSrc = canvas.toDataURL('image/jpeg', 0.9);
+      
+      if (imageSrc) {
+        setCapturedPhoto(imageSrc);
+        stopCamera(); // Stop kamera setelah capture
+        toast.success('Foto berhasil diambil! Periksa dan konfirmasi foto Anda.');
+      } else {
+        toast.error('Gagal mengambil foto. Coba lagi.');
+      }
+    }
+  };
+
+
+
+  // Fungsi untuk konfirmasi dan upload foto
+  const handleConfirmPhoto = async () => {
+    if (!capturedPhoto || !cameraQuestionId) return;
+    
+    setIsUploadingPhoto(true);
+    await processImage(capturedPhoto, cameraQuestionId);
+    setIsUploadingPhoto(false);
+    setCapturedPhoto(null); // Reset preview setelah upload berhasil
+    setShowCameraModal(false); // Tutup modal
+    stopCamera(); // Pastikan kamera berhenti
+  };
+
+  // Fungsi untuk ambil ulang foto
+  const handleRetakePhoto = () => {
+    setCapturedPhoto(null);
+    toast.info('Silakan ambil foto ulang');
+    // Restart kamera
+    startCamera();
+  };
+
+  // Cleanup kamera saat modal ditutup
+  const handleCloseModal = () => {
+    stopCamera();
+    setShowCameraModal(false);
+    setCapturedPhoto(null);
+    setCameraQuestionId(null);
+    setCameraLoading(true);
+    setCameraError(null);
   };
 
   const processImage = async (imageSrc: string, questionId: string) => {
@@ -712,7 +764,7 @@ export default function SiswaUjianDetailPage() {
       }
       
       // Close dialog
-      setShowCameraDialog(false);
+      setShowCameraModal(false);
       setCameraQuestionId(null);
       
       toast.success('Foto berhasil diupload dan disimpan', { id: 'upload-image' });
@@ -1222,123 +1274,104 @@ export default function SiswaUjianDetailPage() {
                 </>
               ) : (
                 <>
-                  {/* Input Mode Toggle */}
-                  <div className="mt-4 flex gap-2 mb-3">
-                    <Button
-                      type="button"
-                      variant={essayInputMode[currentQ.id] !== 'image' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        const newModes: { [key: string]: 'text' | 'image' } = { ...essayInputMode, [currentQ.id]: 'text' as const };
-                        setEssayInputMode(newModes);
-                      }}
-                    >
-                      <FloppyDisk className="w-4 h-4 mr-2" />
-                      Tulis Manual
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={essayInputMode[currentQ.id] === 'image' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setCameraQuestionId(currentQ.id);
-                        setShowCameraDialog(true);
-                      }}
-                    >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Foto Jawaban
-                    </Button>
-                  </div>
-
-                  {/* Text Input Mode */}
-                  {essayInputMode[currentQ.id] !== 'image' && (
-                    <>
-                      <Textarea
-                        value={answers[currentQ.id] || ""}
-                        onChange={(e) => handleAnswerChange(currentQ.id, e.target.value, 'essay')}
-                        onPaste={(e) => {
-                          // Trigger immediate save on paste
-                          setTimeout(() => {
-                            const newValue = (e.currentTarget as HTMLTextAreaElement).value;
-                            handleAnswerChange(currentQ.id, newValue, 'essay');
-                            // Save immediately after paste
-                            setTimeout(() => {
-                              saveAnswerToQueue(currentQ.id, 'essay', newValue);
-                            }, 500);
-                          }, 0);
-                        }}
-                        placeholder="Tulis jawaban Anda di sini..."
-                        rows={8}
-                        className="mt-2 text-sm sm:text-base"
-                      />
-                    </>
-                  )}
-
-                  {/* Image Input Mode */}
-                  {essayInputMode[currentQ.id] === 'image' && (
-                    <div className="mt-2 space-y-3">
-                      {essayImages[currentQ.id] ? (
-                        <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4">
-                          <img
-                            src={essayImages[currentQ.id]}
-                            alt="Jawaban essay"
-                            className="max-w-full h-auto rounded-lg mx-auto"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-2 right-2"
-                            onClick={() => {
-                              const newImages = { ...essayImages };
-                              delete newImages[currentQ.id];
-                              setEssayImages(newImages);
-                              const newModes: { [key: string]: 'text' | 'image' } = { ...essayInputMode, [currentQ.id]: 'text' as const };
-                              setEssayInputMode(newModes);
-                              handleAnswerChange(currentQ.id, '', 'essay');
-                              // Update localStorage
-                              try {
-                                localStorage.setItem(getImagesStorageKey(), JSON.stringify(newImages));
-                                localStorage.setItem(getInputModeStorageKey(), JSON.stringify(newModes));
-                              } catch (error) {
-                                console.error('Error updating localStorage:', error);
-                              }
-                            }}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="absolute bottom-2 right-2"
-                            onClick={() => {
-                              setCameraQuestionId(currentQ.id);
-                              setShowCameraDialog(true);
-                            }}
-                          >
-                            <Camera className="w-4 h-4 mr-2" />
-                            Ambil Foto Lagi
-                          </Button>
+                  {/* Foto Jawaban (jika ada) - Ditampilkan di atas */}
+                  {essayImages[currentQ.id] && (
+                    <div className="mb-4">
+                      <div className="relative border-2 border-blue-200 rounded-lg p-3 bg-blue-50/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+                            <ImageSquare className="w-4 h-4" weight="fill" />
+                            Foto Jawaban
+                          </Label>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => openCameraModal(currentQ.id)}
+                            >
+                              <Camera className="w-3 h-3 mr-1" />
+                              Ganti
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => {
+                                const newImages = { ...essayImages };
+                                delete newImages[currentQ.id];
+                                setEssayImages(newImages);
+                                // Update localStorage
+                                try {
+                                  localStorage.setItem(getImagesStorageKey(), JSON.stringify(newImages));
+                                } catch (error) {
+                                  console.error('Error updating localStorage:', error);
+                                }
+                                toast.success('Foto jawaban dihapus');
+                              }}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                          <ImageSquare className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                          <p className="text-gray-600 mb-4">Belum ada foto jawaban</p>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              setCameraQuestionId(currentQ.id);
-                              setShowCameraDialog(true);
-                            }}
-                          >
-                            <Camera className="w-4 h-4 mr-2" />
-                            Ambil Foto
-                          </Button>
-                        </div>
-                      )}
+                        <img
+                          src={essayImages[currentQ.id]}
+                          alt="Jawaban essay"
+                          className="w-full h-auto rounded-lg border-2 border-white shadow-sm"
+                        />
+                      </div>
                     </div>
                   )}
+
+                  {/* Tombol Ambil Foto (jika belum ada foto) */}
+                  {!essayImages[currentQ.id] && (
+                    <div className="mb-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCameraModal(currentQ.id)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Ambil Foto Jawaban
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload foto lembar jawaban Anda (opsional)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Text Area - Selalu ditampilkan */}
+                  <div className="space-y-2">
+                    <Label htmlFor={`essay-${currentQ.id}`} className="text-sm font-semibold">
+                      {essayImages[currentQ.id] ? 'Catatan Tambahan (Opsional)' : 'Jawaban Tulisan'}
+                    </Label>
+                    <Textarea
+                      id={`essay-${currentQ.id}`}
+                      value={answers[currentQ.id] || ""}
+                      onChange={(e) => handleAnswerChange(currentQ.id, e.target.value, 'essay')}
+                      onPaste={(e) => {
+                        // Trigger immediate save on paste
+                        setTimeout(() => {
+                          const newValue = (e.currentTarget as HTMLTextAreaElement).value;
+                          handleAnswerChange(currentQ.id, newValue, 'essay');
+                          // Save immediately after paste
+                          setTimeout(() => {
+                            saveAnswerToQueue(currentQ.id, 'essay', newValue);
+                          }, 500);
+                        }, 0);
+                      }}
+                      placeholder={essayImages[currentQ.id] 
+                        ? "Tulis catatan atau penjelasan tambahan di sini (opsional)..."
+                        : "Tulis jawaban Anda di sini..."
+                      }
+                      rows={essayImages[currentQ.id] ? 4 : 8}
+                      className="text-sm sm:text-base"
+                    />
+                  </div>
 
                   {/* Save status indicator for Essay */}
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -1526,101 +1559,205 @@ export default function SiswaUjianDetailPage() {
       </AlertDialog>
 
       {/* Camera Dialog for Essay Photo */}
-      <Dialog open={showCameraDialog} onOpenChange={setShowCameraDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Ambil Foto Jawaban</DialogTitle>
-            <DialogDescription>
-              Arahkan kamera ke lembar jawaban Anda dan pastikan tulisan jelas terlihat, atau upload foto dari galeri
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Camera Error Message */}
-            {cameraError && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">{cameraError}</p>
-              </div>
-            )}
+      {/* Canvas tersembunyi untuk capture */}
+      <canvas ref={canvasRef} className="hidden" />
 
-            {/* Camera View */}
-            {cameraAvailable !== false && (
-              <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                {cameraAvailable ? (
-                  <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    videoConstraints={{
-                      facingMode: "environment", // Use back camera
-                      width: { ideal: 1280 },
-                      height: { ideal: 960 },
-                    }}
-                    className="w-full h-full object-cover"
-                    onUserMedia={() => {
-                      setCameraError(null);
-                    }}
-                    onUserMediaError={(error) => {
-                      console.error('Webcam error:', error);
-                      setCameraAvailable(false);
-                      setCameraError('Tidak dapat mengakses kamera. Gunakan opsi upload file sebagai alternatif.');
-                    }}
-                  />
-                ) : cameraAvailable === null ? (
-                  <div className="absolute inset-0 flex items-center justify-center text-white">
-                    <div className="text-center">
-                      <CircleNotch className="w-8 h-8 animate-spin mx-auto mb-2" />
-                      <p>Memuat kamera...</p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            {/* File Input (Always available as fallback) */}
-            <div className="space-y-2">
-              <Label htmlFor="photo-upload">Atau Upload Foto dari Galeri</Label>
-              <Input
-                id="photo-upload"
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileSelect}
-                className="cursor-pointer"
-              />
-              <p className="text-xs text-muted-foreground">
-                Pilih foto dari galeri atau ambil foto baru (mendukung iPhone/iOS)
+      {/* Modal Kamera - Live Preview WebRTC */}
+      <Dialog open={showCameraModal} onOpenChange={(open) => {
+        if (!open && !isUploadingPhoto) {
+          handleCloseModal();
+        }
+      }}>
+        <DialogPortal>
+          <DialogOverlay className="z-[10000]" />
+          <div className="fixed left-[50%] top-[50%] z-[10001] grid w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-3 sm:gap-4 border bg-background p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg sm:rounded-xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto touch-manipulation">
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              disabled={isUploadingPhoto}
+              className="absolute right-2 top-2 sm:right-4 sm:top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10"
+            >
+              <X className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+            
+            <div className="flex flex-col gap-1.5 sm:gap-2 text-center sm:text-left pr-8 sm:pr-0">
+              <h2 className="text-base sm:text-lg leading-tight font-semibold">
+                {capturedPhoto ? 'Pratinjau Foto Jawaban' : 'Ambil Foto Jawaban'}
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+                {capturedPhoto 
+                  ? 'Periksa foto Anda. Pastikan tulisan jelas terlihat.'
+                  : 'Arahkan kamera ke lembar jawaban Anda.'
+                }
               </p>
             </div>
+            
+            <div className="space-y-3 sm:space-y-4">
+            {/* Error Message */}
+            {cameraError && !capturedPhoto && (
+              <div className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md sm:rounded-lg">
+                <p className="text-xs sm:text-sm text-red-800 dark:text-red-200 font-semibold mb-1">❌ Kamera Gagal Diakses</p>
+                <p className="text-xs text-red-700 dark:text-red-300 leading-snug">{cameraError}</p>
+              </div>
+            )}
 
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCameraDialog(false);
-                  setCameraQuestionId(null);
-                  setCameraError(null);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-              >
-                Batal
-              </Button>
-              {cameraAvailable && (
-                <Button onClick={handleCapturePhoto}>
-                  <Camera className="w-4 h-4 mr-2" />
-                  Ambil Foto
-                </Button>
+            {/* Video Live Stream atau Preview Foto */}
+            <div className="relative w-full bg-black rounded-md sm:rounded-lg overflow-hidden touch-none select-none" style={{ aspectRatio: '4/3' }}>
+              {capturedPhoto ? (
+                // Preview foto yang sudah diambil
+                <img 
+                  src={capturedPhoto} 
+                  alt="Preview foto jawaban" 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                // Live video stream WebRTC
+                <>
+                  {!cameraError && (
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  
+                  {/* Loading overlay */}
+                  {cameraLoading && !cameraError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                      <div className="text-center text-white px-4">
+                        <CircleNotch className="w-10 h-10 sm:w-12 sm:h-12 animate-spin mx-auto mb-2 sm:mb-3" />
+                        <p className="text-sm sm:text-base font-semibold">Memuat kamera...</p>
+                        <p className="text-xs text-gray-300 mt-1">Mohon izinkan akses kamera</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error overlay */}
+                  {cameraError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                      <div className="text-center text-white px-4">
+                        <Camera className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 opacity-50" />
+                        <p className="text-sm">Kamera tidak tersedia</p>
+                        <p className="text-xs text-gray-400 mt-2">Refresh halaman untuk coba lagi</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Crosshair/Guide untuk centering - Responsif */}
+                  {!cameraLoading && !cameraError && !capturedPhoto && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute inset-0 border-2 border-blue-500/30"></div>
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500/50 rounded-lg"></div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              {cameraAvailable 
-                ? 'Pastikan pencahayaan cukup dan tulisan jelas terlihat sebelum mengambil foto'
-                : 'Gunakan tombol "Upload Foto dari Galeri" untuk memilih atau mengambil foto'}
-            </p>
+
+            {/* Buttons - Responsif untuk mobile */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              {capturedPhoto ? (
+                // Tombol untuk mode preview
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseModal}
+                    disabled={isUploadingPhoto}
+                    className="order-3 sm:order-1"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleRetakePhoto}
+                    disabled={isUploadingPhoto}
+                    className="order-2 sm:order-2"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Ambil Ulang
+                  </Button>
+                  <Button
+                    onClick={handleConfirmPhoto}
+                    disabled={isUploadingPhoto}
+                    className="order-1 sm:order-3"
+                  >
+                    {isUploadingPhoto ? (
+                      <>
+                        <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                        Mengupload...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" weight="fill" />
+                        Gunakan Foto Ini
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                // Tombol untuk mode live camera
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseModal}
+                    disabled={isUploadingPhoto}
+                    className="order-2 sm:order-1"
+                  >
+                    Batal
+                  </Button>
+                  <Button 
+                    onClick={handleCapturePhoto}
+                    disabled={cameraLoading || !!cameraError}
+                    size="lg"
+                    className="order-1 sm:order-2 sm:min-w-[140px]"
+                  >
+                    {cameraLoading ? (
+                      <>
+                        <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                        Memuat...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 mr-2" weight="fill" />
+                        Ambil Foto
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            {/* Info text - Responsif */}
+            <div className="text-center px-2 sm:px-0">
+              {capturedPhoto ? (
+                <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+                  Periksa dengan teliti. Klik "Ambil Ulang" jika foto kurang jelas.
+                </p>
+              ) : cameraLoading ? (
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  ⏳ Sedang meminta izin akses kamera...
+                </p>
+              ) : cameraError ? (
+                <p className="text-xs sm:text-sm text-red-500 leading-snug">
+                  Tutup modal dan coba lagi, atau refresh halaman jika masalah berlanjut.
+                </p>
+              ) : (
+                <div className="space-y-0.5 sm:space-y-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    📷 Arahkan kamera ke lembar jawaban Anda
+                  </p>
+                  <p className="text-xs text-gray-500 leading-snug">
+                    Pastikan pencahayaan cukup dan tulisan jelas terlihat
+                  </p>
+                </div>
+              )}
+            </div>
+            </div>
           </div>
-        </DialogContent>
+        </DialogPortal>
       </Dialog>
     </>
   );
