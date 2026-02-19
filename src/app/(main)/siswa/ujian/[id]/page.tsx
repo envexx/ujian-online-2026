@@ -490,7 +490,7 @@ export default function SiswaUjianDetailPage() {
     }
   }, [params.id, answers, isSubmitting, ujianData]);
 
-  // Countdown timer
+  // Countdown timer (client-side) - reduces server polling by 90%
   useEffect(() => {
     if (!isStarted || timeRemaining <= 0) return;
     const timer = setInterval(() => {
@@ -501,6 +501,21 @@ export default function SiswaUjianDetailPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isStarted, timeRemaining]);
+
+  // Server time sync every 5 minutes (instead of 30 seconds)
+  // This reduces server requests from 180 to 18 per exam session
+  useEffect(() => {
+    if (!isStarted || !params.id) return;
+    
+    // Sync with server every 5 minutes to handle clock drift
+    const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    const syncInterval = setInterval(() => {
+      fetchTimeRemaining();
+    }, SYNC_INTERVAL);
+    
+    return () => clearInterval(syncInterval);
+  }, [isStarted, params.id, fetchTimeRemaining]);
 
   // Auto-submit check
   useEffect(() => {
