@@ -1,10 +1,8 @@
 "use client";
 
 import { addDays, format } from "date-fns";
-import { Home, Receipt, Sparkles, Zap } from "lucide-react";
-import { siApple, siMastercard } from "simple-icons";
+import { Apple, CreditCard, Home, Receipt, Sparkles, Zap } from "lucide-react";
 
-import { SimpleIcon } from "@/components/simple-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -55,7 +53,7 @@ export function CardOverview() {
           <div className="grid w-full place-items-center">
             <div className="relative flex aspect-8/5 w-full max-w-100 flex-col justify-between overflow-hidden rounded-xl bg-primary p-6">
               <div className="flex items-start justify-between">
-                <SimpleIcon icon={siApple} className="size-5 fill-primary-foreground sm:size-8" />
+                <Apple className="size-5 text-primary-foreground sm:size-8" />
               </div>
 
               <div className="space-y-1">
@@ -80,7 +78,7 @@ export function CardOverview() {
                     </div>
                   </div>
                 </div>
-                <SimpleIcon icon={siMastercard} className="size-7 fill-primary-foreground/80 sm:size-10" />
+                <CreditCard className="size-7 text-primary-foreground/80 sm:size-10" />
               </div>
             </div>
           </div>
