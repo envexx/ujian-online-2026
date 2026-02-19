@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 
-
+export const runtime = 'edge';
 
 // Helper function to extract text from OMML element recursively
 function extractTextFromElement(element: Element | null): string {

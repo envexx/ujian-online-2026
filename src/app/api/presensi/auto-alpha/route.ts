@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentDateIndonesia, getStartOfDayIndonesia } from '@/lib/date-utils';
 
+export const runtime = 'edge';
+
 /**
  * Auto-mark students as ALPHA if they haven't scanned by 9:00 AM
  * This endpoint should be called by a cron job at 9:00 AM daily

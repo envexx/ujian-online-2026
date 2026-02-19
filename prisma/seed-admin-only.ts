@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { neonConfig, Pool } from '@neondatabase/serverless';
 import ws from 'ws';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from '../src/lib/password';
 
 neonConfig.webSocketConstructor = ws;
 
@@ -41,7 +41,7 @@ async function main() {
     data: {
       schoolId: school.id,
       email: 'admin@school.com',
-      password: await bcrypt.hash('admin123', 10),
+      password: hashPassword('admin123'),
       role: 'ADMIN',
       profilePhoto: '/uploads/profiles/admin.jpg',
     },

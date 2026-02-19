@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 // import { prisma } from '@/lib/prisma';
 
+export const runtime = 'edge';
+
 // TODO: Implement Nilai model in Prisma schema before enabling these endpoints
 export async function GET(request: Request) {
   return NextResponse.json(

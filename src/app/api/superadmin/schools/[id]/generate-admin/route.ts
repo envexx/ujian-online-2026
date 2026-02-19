@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 async function verifySuperAdmin() {
   const session = await getSession();
@@ -46,8 +48,8 @@ export async function POST(
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash password with Scrypt
+    const hashedPassword = hashPassword(password);
 
     // Create admin user
     const user = await prisma.user.create({

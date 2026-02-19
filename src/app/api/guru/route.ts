@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { includes } from '@/lib/query-helpers';
 import { getSession } from '@/lib/session';
 import { checkTierLimit } from '@/lib/tier-limits';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -90,9 +92,9 @@ export async function POST(request: Request) {
       );
     }
     
-    // Hash default password
+    // Hash default password with Scrypt
     const defaultPassword = 'guru123';
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const hashedPassword = hashPassword(defaultPassword);
     
     // Create User account first
     const user = await prisma.user.create({

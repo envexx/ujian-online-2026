@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 // GET: Get notifications for current user
 export async function GET() {
   try {

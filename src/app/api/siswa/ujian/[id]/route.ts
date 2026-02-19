@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { refreshSession } from '@/lib/session';
 import type { PilihanGandaData, PencocokanData } from '@/types/soal';
 
+export const runtime = 'edge';
+
 /**
  * SECURITY: Strip answer keys from soal data before sending to student.
  * Each soal type has different fields that contain the answer.

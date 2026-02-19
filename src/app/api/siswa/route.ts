@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { includes } from '@/lib/query-helpers';
 import { getSession } from '@/lib/session';
 import { checkTierLimit } from '@/lib/tier-limits';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -123,8 +125,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password default (NISN)
-    const hashedPassword = await bcrypt.hash(nisn, 10);
+    // Hash password default (NISN) with Scrypt
+    const hashedPassword = hashPassword(nisn);
 
     // Convert tanggalLahir if provided
     let parsedTanggalLahir: Date | undefined;

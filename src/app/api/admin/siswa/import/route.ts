@@ -3,7 +3,9 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { checkTierLimit } from '@/lib/tier-limits';
 import * as XLSX from 'xlsx';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
 
         // Create user and siswa in transaction
         await prisma.$transaction(async (tx) => {
-          const defaultPassword = await bcrypt.hash(nisn, 10);
+          const defaultPassword = hashPassword(nisn);
           const user = await tx.user.create({
             data: {
               schoolId: session.schoolId!,

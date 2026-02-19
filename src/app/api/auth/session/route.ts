@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession, refreshSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     // Use refreshSession to automatically refresh the session on each check (rolling session)

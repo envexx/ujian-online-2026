@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 const MANUAL_GRADE_TYPES = ['ESSAY'];
 const PARTIAL_SCORE_TYPES = ['PENCOCOKAN'];
 

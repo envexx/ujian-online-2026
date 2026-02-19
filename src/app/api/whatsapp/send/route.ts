@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { addToQueue, getQueueStatus } from '@/lib/whatsapp-queue';
 
+export const runtime = 'edge';
+
 // Endpoint untuk menambahkan pesan ke antrian
 export async function POST(request: Request) {
   try {

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   try {
     // Check if prisma is properly initialized

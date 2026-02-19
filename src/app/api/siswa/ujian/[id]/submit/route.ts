@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { refreshSession } from '@/lib/session';
 import { autoGradeSoal, TipeSoal, SoalData, JawabanData } from '@/types/soal';
 
+export const runtime = 'edge';
+
 const MANUAL_GRADE_TYPES = ['ESSAY'];
 const PARTIAL_SCORE_TYPES = ['PENCOCOKAN'];
 

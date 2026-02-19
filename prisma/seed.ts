@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { neonConfig, Pool } from '@neondatabase/serverless';
 import ws from 'ws';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from '../src/lib/password';
 
 neonConfig.webSocketConstructor = ws;
 
@@ -54,7 +54,7 @@ async function main() {
   await prisma.superAdmin.create({
     data: {
       email: 'superadmin@platform.com',
-      password: await bcrypt.hash('superadmin123', 10),
+      password: hashPassword('superadmin123'),
       nama: 'Super Admin',
     },
   });
@@ -167,7 +167,7 @@ async function main() {
     data: {
       schoolId,
       email: 'admin@school.com',
-      password: await bcrypt.hash('admin123', 10),
+      password: hashPassword('admin123'),
       role: 'ADMIN',
       profilePhoto: '/uploads/profiles/admin.jpg',
     },
@@ -262,7 +262,7 @@ async function main() {
     data: {
       schoolId,
       email: 'budi.hartono@school.com',
-      password: await bcrypt.hash('guru123', 10),
+      password: hashPassword('guru123'),
       role: 'GURU',
       profilePhoto: '/uploads/profiles/guru1.jpg',
       guru: {
@@ -284,7 +284,7 @@ async function main() {
     data: {
       schoolId,
       email: 'siti.nurhaliza@school.com',
-      password: await bcrypt.hash('guru123', 10),
+      password: hashPassword('guru123'),
       role: 'GURU',
       profilePhoto: '/uploads/profiles/guru2.jpg',
       guru: {
@@ -306,7 +306,7 @@ async function main() {
     data: {
       schoolId,
       email: 'ahmad.fauzi@school.com',
-      password: await bcrypt.hash('guru123', 10),
+      password: hashPassword('guru123'),
       role: 'GURU',
       profilePhoto: '/uploads/profiles/guru3.jpg',
       guru: {
@@ -438,7 +438,7 @@ async function main() {
       data: {
         schoolId,
         email: data.email,
-        password: await bcrypt.hash('siswa123', 10),
+        password: hashPassword('siswa123'),
         role: 'SISWA',
         profilePhoto: `/uploads/profiles/${data.nis}.jpg`,
         siswa: {

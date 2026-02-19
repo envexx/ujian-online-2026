@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { chatWithAI, type ChatMessage, type AIResponse } from '@/lib/ai-chatbot';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   try {
     const session = await getSession();

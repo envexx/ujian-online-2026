@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 /**
  * Cron endpoint for Vercel Cron Jobs or external cron services
  * This should be configured to run daily at 9:00 AM WIB

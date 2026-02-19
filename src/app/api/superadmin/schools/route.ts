@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 // Helper: verify superadmin session
 async function verifySuperAdmin() {
   const session = await getSession();

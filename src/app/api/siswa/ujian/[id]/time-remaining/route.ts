@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 /**
  * API endpoint untuk mendapatkan waktu tersisa ujian
  * Menghitung berdasarkan:

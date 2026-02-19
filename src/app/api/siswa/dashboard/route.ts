@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { refreshSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   try {
     // Use refreshSession to keep session alive on dashboard access (rolling session)

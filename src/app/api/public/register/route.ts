@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
 
     // ========== CREATE SCHOOL + ADMIN IN TRANSACTION ==========
 
-    const hashedPassword = await bcrypt.hash(passwordAdmin, 10);
+    const hashedPassword = hashPassword(passwordAdmin);
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create school

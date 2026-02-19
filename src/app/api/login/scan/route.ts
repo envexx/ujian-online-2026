@@ -1,31 +1,7 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// In-memory store untuk session detection
-// Dalam production, bisa menggunakan Redis atau database
-declare global {
-  // eslint-disable-next-line no-var
-  var scanSessions: Map<string, { device: { type: string; platform: string } | null; timestamp: number }> | undefined;
-  // eslint-disable-next-line no-var
-  var scanSessionsCleanup: NodeJS.Timeout | undefined;
-}
-
-// Use global to persist across hot reloads in development
-const scanSessions = globalThis.scanSessions || new Map<string, { device: { type: string; platform: string } | null; timestamp: number }>();
-if (!globalThis.scanSessions) {
-  globalThis.scanSessions = scanSessions;
-  
-  // Cleanup old sessions (older than 5 minutes)
-  if (!globalThis.scanSessionsCleanup) {
-    globalThis.scanSessionsCleanup = setInterval(() => {
-      const now = Date.now();
-      for (const [sessionId, data] of scanSessions.entries()) {
-        if (now - data.timestamp > 5 * 60 * 1000) {
-          scanSessions.delete(sessionId);
-        }
-      }
-    }, 60000); // Run cleanup every minute
-  }
-}
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -72,14 +48,17 @@ export async function GET(request: Request) {
       }
     }
 
-    // Simpan detection result
-    scanSessions.set(sessionId, {
-      device: {
-        type,
-        platform,
-      },
-      timestamp: Date.now(),
-    });
+    // Store scan session in database using raw SQL (Edge-compatible)
+    // Using PasswordResetToken table as temporary storage (will be cleaned up)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const deviceData = JSON.stringify({ type, platform });
+    
+    // Upsert scan session data
+    await prisma.$executeRaw`
+      INSERT INTO "PasswordResetToken" (id, email, token, "expiresAt", used)
+      VALUES (gen_random_uuid(), ${`scan_${sessionId}`}, ${deviceData}, ${expiresAt}, false)
+      ON CONFLICT (email) DO UPDATE SET token = ${deviceData}, "expiresAt" = ${expiresAt}
+    `;
 
     // Return HTML page untuk redirect atau info
     return new NextResponse(

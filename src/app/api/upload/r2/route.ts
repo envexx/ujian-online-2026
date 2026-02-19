@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
+export const runtime = 'edge';
+
 // Cloudflare R2 Configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const R2_ENDPOINT = R2_ACCOUNT_ID ? `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : '';

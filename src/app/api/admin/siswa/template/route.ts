@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     const session = await getSession();

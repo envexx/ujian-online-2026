@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { sendEmail } from '@/lib/email';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   try {
     const session = await getSession();

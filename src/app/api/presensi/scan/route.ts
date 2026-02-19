@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentDateIndonesia, getStartOfDayIndonesia, formatIndonesiaDate } from '@/lib/date-utils';
 
+export const runtime = 'edge';
+
 // Fungsi untuk mendapatkan nama hari dalam bahasa Indonesia
 function getHariIndonesia(): string {
   const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];

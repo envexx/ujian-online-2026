@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { includes } from '@/lib/query-helpers';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

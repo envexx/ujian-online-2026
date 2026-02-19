@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import bcrypt from 'bcryptjs';
+import { hashPassword, verifyPassword, isBcryptHash } from '@/lib/password';
+
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
@@ -41,8 +43,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if password is still in old bcrypt format
+    if (isBcryptHash(user.password)) {
+      return NextResponse.json(
+        { success: false, error: 'Akun Anda perlu migrasi. Silakan gunakan fitur Lupa Password untuk reset.' },
+        { status: 403 }
+      );
+    }
+
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isPasswordValid = verifyPassword(currentPassword, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
         { success: false, error: 'Password lama salah' },
@@ -50,8 +60,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    // Hash new password with Scrypt
+    const hashedPassword = hashPassword(newPassword);
 
     // Update password
     await prisma.user.update({

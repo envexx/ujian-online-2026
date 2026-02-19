@@ -1,12 +1,39 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+export const runtime = 'edge';
+
+// Cloudflare R2 Configuration
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
+const R2_ENDPOINT = R2_ACCOUNT_ID ? `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : '';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
+const R2_BUCKET = process.env.R2_BUCKET_NAME || 'e-learning';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+
+function getR2Client() {
+  return new S3Client({
+    region: 'auto',
+    endpoint: R2_ENDPOINT,
+    credentials: {
+      accessKeyId: R2_ACCESS_KEY_ID,
+      secretAccessKey: R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
 export async function POST(request: Request) {
   try {
+    // Validate R2 configuration
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_PUBLIC_URL) {
+      return NextResponse.json(
+        { success: false, error: 'R2 storage tidak dikonfigurasi' },
+        { status: 500 }
+      );
+    }
+
     const session = await getSession();
     if (!session.isLoggedIn || !session.userId) {
       return NextResponse.json(
@@ -46,19 +73,23 @@ export async function POST(request: Request) {
     const ext = file.name.split('.').pop() || 'jpg';
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
-    const fileName = `profile_${session.userId}_${timestamp}_${randomStr}.${ext}`;
+    const fileName = `profiles/profile_${session.userId}_${timestamp}_${randomStr}.${ext}`;
 
-    // Save file
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'profiles');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
+    // Convert file to buffer and upload to R2
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(join(uploadDir, fileName), buffer);
+    const buffer = new Uint8Array(bytes);
 
-    const photoUrl = `/uploads/profiles/${fileName}`;
+    const s3Client = getR2Client();
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: fileName,
+      Body: buffer,
+      ContentType: file.type,
+    });
+
+    await s3Client.send(command);
+
+    const photoUrl = `${R2_PUBLIC_URL}/${fileName}`;
 
     // Update profilePhoto on User model
     await prisma.user.update({

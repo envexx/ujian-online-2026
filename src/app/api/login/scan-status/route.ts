@@ -1,21 +1,7 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// Import the same scanSessions map
-// Note: In a real app, you'd want to share this via a module or use Redis/database
-// For now, we'll recreate the logic - but ideally this should be in a shared module
-
-// In production, use Redis or database instead
-// This is a simplified in-memory approach
-declare global {
-  // eslint-disable-next-line no-var
-  var scanSessions: Map<string, { device: { type: string; platform: string } | null; timestamp: number }> | undefined;
-}
-
-// Use global to persist across hot reloads in development
-const scanSessions = globalThis.scanSessions || new Map<string, { device: { type: string; platform: string } | null; timestamp: number }>();
-if (!globalThis.scanSessions) {
-  globalThis.scanSessions = scanSessions;
-}
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
@@ -29,20 +15,36 @@ export async function GET(request: Request) {
       );
     }
 
-    const sessionData = scanSessions.get(sessionId);
+    // Query scan session from database
+    const scanSession = await prisma.passwordResetToken.findFirst({
+      where: {
+        email: `scan_${sessionId}`,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-    if (!sessionData || !sessionData.device) {
+    if (!scanSession || !scanSession.token) {
       return NextResponse.json({
         success: true,
         detected: false,
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      detected: true,
-      device: sessionData.device,
-    });
+    // Parse device data from token field
+    try {
+      const device = JSON.parse(scanSession.token);
+      return NextResponse.json({
+        success: true,
+        detected: true,
+        device,
+      });
+    } catch {
+      return NextResponse.json({
+        success: true,
+        detected: false,
+      });
+    }
   } catch (error) {
     console.error('Error checking scan status:', error);
     return NextResponse.json(

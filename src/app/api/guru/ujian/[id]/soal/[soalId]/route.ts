@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import type { TipeSoal, SoalData } from '@/types/soal';
 
+export const runtime = 'edge';
+
 // PUT - Update soal
 export async function PUT(
   request: Request,

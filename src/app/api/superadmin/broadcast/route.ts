@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { sendEmail } from '@/lib/email';
 
+export const runtime = 'edge';
+
 async function verifySuperAdmin() {
   const session = await getSession();
   if (!session.isLoggedIn || session.role !== 'SUPERADMIN') return null;

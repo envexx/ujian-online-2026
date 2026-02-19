@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
+
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
@@ -58,8 +60,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash new password with Scrypt
+    const hashedPassword = hashPassword(password);
 
     // Update password and mark token as used
     await prisma.$transaction([

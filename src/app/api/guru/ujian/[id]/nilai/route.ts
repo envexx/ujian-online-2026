@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+export const runtime = 'edge';
+
 // Types that need manual grading by guru
 const MANUAL_GRADE_TYPES = ['ESSAY'];
 // Types that support partial scoring (nilai 0-100 stored on JawabanSoal)

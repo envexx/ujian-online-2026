@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mammoth from 'mammoth';
+import JSZip from 'jszip';
+import { DOMParser } from '@xmldom/xmldom';
+
+export const runtime = 'edge';
 
 interface ParsedQuestion {
   questionNumber: string;
@@ -8,6 +11,16 @@ interface ParsedQuestion {
   context?: string;
   options: string[];
   correctAnswer?: string; // Letter: 'A', 'B', 'C', or 'D'
+}
+
+// Helper to convert ArrayBuffer to base64 in Edge runtime
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 export async function POST(request: NextRequest) {
@@ -22,29 +35,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to buffer
+    // Convert file to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
-    // Extract with mammoth - convert to HTML with embedded images as Base64
-    const result = await mammoth.convertToHtml(
-      { buffer },
-      {
-        convertImage: mammoth.images.imgElement(async (image) => {
-          // Extract image as Base64
-          const buffer = await image.read();
-          const base64 = buffer.toString('base64');
-          const contentType = image.contentType || 'image/png';
-          
-          return {
-            src: `data:${contentType};base64,${base64}`
-          };
-        })
+    // Parse DOCX using JSZip (Edge-compatible)
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    
+    // Extract document.xml (main content)
+    const documentXml = await zip.file('word/document.xml')?.async('string');
+    if (!documentXml) {
+      return NextResponse.json(
+        { error: 'Invalid Word document - no document.xml found' },
+        { status: 400 }
+      );
+    }
+
+    // Extract images from word/media folder
+    const images: Map<string, string> = new Map();
+    const mediaFolder = zip.folder('word/media');
+    if (mediaFolder) {
+      const mediaFiles = Object.keys(zip.files).filter(f => f.startsWith('word/media/'));
+      for (const mediaPath of mediaFiles) {
+        const mediaFile = zip.file(mediaPath);
+        if (mediaFile) {
+          const imageData = await mediaFile.async('arraybuffer');
+          const ext = mediaPath.split('.').pop()?.toLowerCase() || 'png';
+          const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
+                          ext === 'png' ? 'image/png' : 
+                          ext === 'gif' ? 'image/gif' : 'image/png';
+          const base64 = arrayBufferToBase64(imageData);
+          const imageName = mediaPath.split('/').pop() || '';
+          images.set(imageName, `data:${mimeType};base64,${base64}`);
+        }
       }
-    );
+    }
 
-    const html = result.value;
-    const messages = result.messages; // Any warnings/errors from mammoth
+    // Extract relationships for image references
+    const relsXml = await zip.file('word/_rels/document.xml.rels')?.async('string');
+    const imageRels: Map<string, string> = new Map();
+    if (relsXml) {
+      const relsDoc = new DOMParser().parseFromString(relsXml, 'text/xml');
+      const relationships = relsDoc.getElementsByTagName('Relationship');
+      for (let i = 0; i < relationships.length; i++) {
+        const rel = relationships[i];
+        const id = rel.getAttribute('Id') || '';
+        const target = rel.getAttribute('Target') || '';
+        if (target.startsWith('media/')) {
+          const imageName = target.replace('media/', '');
+          imageRels.set(id, imageName);
+        }
+      }
+    }
+
+    // Parse document XML to HTML-like structure
+    const html = parseDocxToHtml(documentXml, images, imageRels);
 
     // Parse HTML into structured questions
     const questions = parseQuestionsFromHTML(html);
@@ -52,7 +96,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       questions,
-      messages: messages.length > 0 ? messages : undefined,
     });
   } catch (error: any) {
     console.error('Error parsing Word document:', error);
@@ -61,6 +104,109 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Parse DOCX XML to HTML-like structure
+ */
+function parseDocxToHtml(xml: string, images: Map<string, string>, imageRels: Map<string, string>): string {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  let html = '';
+  
+  // Get all paragraphs
+  const paragraphs = doc.getElementsByTagName('w:p');
+  
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i];
+    let paraText = '';
+    let isBold = false;
+    
+    // Get all runs in paragraph
+    const runs = para.getElementsByTagName('w:r');
+    for (let j = 0; j < runs.length; j++) {
+      const run = runs[j];
+      
+      // Check for bold
+      const rPr = run.getElementsByTagName('w:rPr')[0];
+      if (rPr) {
+        const bold = rPr.getElementsByTagName('w:b')[0];
+        if (bold) isBold = true;
+      }
+      
+      // Get text
+      const texts = run.getElementsByTagName('w:t');
+      for (let k = 0; k < texts.length; k++) {
+        const textNode = texts[k];
+        const text = textNode.textContent || '';
+        if (isBold) {
+          paraText += `<strong>${text}</strong>`;
+        } else {
+          paraText += text;
+        }
+      }
+      
+      // Check for images
+      const drawings = run.getElementsByTagName('w:drawing');
+      for (let k = 0; k < drawings.length; k++) {
+        const drawing = drawings[k];
+        const blips = drawing.getElementsByTagName('a:blip');
+        for (let l = 0; l < blips.length; l++) {
+          const blip = blips[l];
+          const embedId = blip.getAttribute('r:embed') || '';
+          if (embedId && imageRels.has(embedId)) {
+            const imageName = imageRels.get(embedId)!;
+            if (images.has(imageName)) {
+              paraText += `<img src="${images.get(imageName)}">`;
+            }
+          }
+        }
+      }
+    }
+    
+    if (paraText.trim()) {
+      html += `<p>${paraText}</p>\n`;
+    }
+  }
+  
+  // Also check for tables
+  const tables = doc.getElementsByTagName('w:tbl');
+  for (let i = 0; i < tables.length; i++) {
+    const table = tables[i];
+    html += '<table>';
+    
+    const rows = table.getElementsByTagName('w:tr');
+    for (let j = 0; j < rows.length; j++) {
+      const row = rows[j];
+      html += '<tr>';
+      
+      const cells = row.getElementsByTagName('w:tc');
+      for (let k = 0; k < cells.length; k++) {
+        const cell = cells[k];
+        let cellText = '';
+        
+        const cellParas = cell.getElementsByTagName('w:p');
+        for (let l = 0; l < cellParas.length; l++) {
+          const cellPara = cellParas[l];
+          const cellRuns = cellPara.getElementsByTagName('w:r');
+          for (let m = 0; m < cellRuns.length; m++) {
+            const cellRun = cellRuns[m];
+            const cellTexts = cellRun.getElementsByTagName('w:t');
+            for (let n = 0; n < cellTexts.length; n++) {
+              cellText += cellTexts[n].textContent || '';
+            }
+          }
+        }
+        
+        html += `<td>${cellText}</td>`;
+      }
+      
+      html += '</tr>';
+    }
+    
+    html += '</table>\n';
+  }
+  
+  return html;
 }
 
 /**

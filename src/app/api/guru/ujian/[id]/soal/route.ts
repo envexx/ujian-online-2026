@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import type { TipeSoal, SoalData } from '@/types/soal';
 
+export const runtime = 'edge';
+
 // GET - Get all soal for an ujian
 export async function GET(
   request: Request,

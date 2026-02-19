@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { verifyPassword, isResetRequired, isBcryptHash } from '@/lib/password';
 import { createSession } from '@/lib/session';
+
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +34,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, superAdmin.password);
+    // Check if password reset is required
+    if (isResetRequired(superAdmin.password)) {
+      return NextResponse.json(
+        { success: false, error: 'Password perlu direset. Hubungi administrator.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if password is still in old bcrypt format
+    if (isBcryptHash(superAdmin.password)) {
+      return NextResponse.json(
+        { success: false, error: 'Akun perlu migrasi. Hubungi administrator.' },
+        { status: 403 }
+      );
+    }
+
+    const isPasswordValid = verifyPassword(password, superAdmin.password);
     if (!isPasswordValid) {
       return NextResponse.json(
         { success: false, error: 'Email atau password salah' },

@@ -4,6 +4,8 @@ import { includes } from '@/lib/query-helpers';
 import { getSession } from '@/lib/session';
 import { checkTierLimit } from '@/lib/tier-limits';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   try {
     const session = await getSession();

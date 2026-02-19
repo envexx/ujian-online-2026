@@ -4,6 +4,8 @@ import { refreshSession } from '@/lib/session';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     // Use refreshSession to keep session alive on dashboard access (rolling session)
